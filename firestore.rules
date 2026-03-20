@@ -1,0 +1,396 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - displayName: string (required, size < 100)
+    //   - photoURL: string (optional, URL format)
+    //   - email: string (required, email format, private)
+    //   - role: string (required)
+    //   - balance: number (optional)
+    //   - points: number (optional)
+    //   - wargaScore: number (optional)
+    //   - lastSeen: timestamp (required)
+    //
+    // Collection: tasks
+    // Document ID: {taskId}
+    // Fields:
+    //   - title: string (required, size < 200)
+    //   - description: string (required, size < 2000)
+    //   - assignedTo: list (required, size < 10)
+    //   - priority: string (required, enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
+    //   - status: string (required, enum: ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'])
+    //   - dueDate: string (optional)
+    //   - location: map (optional, {lat: number, lng: number, address: string})
+    //   - category: string (required)
+    //
+    // Collection: assets
+    // Document ID: {assetId}
+    // Fields:
+    //   - name: string (required, size < 200)
+    //   - type: string (required, enum: ['VEHICLE', 'EQUIPMENT', 'BUILDING'])
+    //   - status: string (required, enum: ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'RETIRED'])
+    //   - condition: string (required, enum: ['EXCELLENT', 'GOOD', 'FAIR', 'POOR'])
+    //   - location: map (optional, {lat: number, lng: number, address: string})
+    //   - lastMaintained: string (optional)
+    //   - assignedTo: string (optional)
+    //   - imageColor: string (optional)
+    //
+    // Collection: budget
+    // Document ID: {budgetId}
+    // Fields:
+    //   - category: string (required)
+    //   - allocated: number (required)
+    //   - realized: number (required)
+    //   - status: string (required)
+    //
+    // Collection: stunting
+    // Document ID: {stuntingId}
+    // Fields:
+    //   - name: string (required)
+    //   - rate: number (required)
+    //
+    // Collection: activities
+    // Document ID: {activityId}
+    // Fields:
+    //   - time: string (required)
+    //   - event: string (required)
+    //   - detail: string (required)
+    //   - icon: string (optional)
+    //   - color: string (optional)
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: stats
+    // Document ID: village_stats
+    // Fields:
+    //   - totalPenduduk: number
+    //   - indeksDesa: number
+    //   - logistik: number
+    //   - peringatan: number
+    //
+    // Collection: market_stalls
+    // Document ID: {stallId}
+    // Fields:
+    //   - name: string (required)
+    //   - owner: string (required)
+    //   - category: string (required, enum: ['KULINER', 'KERAJINAN', 'JASA', 'FASHION'])
+    //   - revenueToday: number (required)
+    //   - status: string (required, enum: ['OPEN', 'CLOSED'])
+    //
+    // Collection: market_layout
+    // Document ID: {itemId}
+    // Fields:
+    //   - type: string (required)
+    //   - label: string (required)
+    //   - x: number (required)
+    //   - y: number (required)
+    //   - width: number (optional)
+    //   - height: number (optional)
+    //   - rotation: number (optional)
+    //   - status: string (optional)
+    //   - linkedStallId: string (optional)
+    //   - capacity: number (optional)
+    //
+    // Collection: market_transactions
+    // Document ID: {transactionId}
+    // Fields:
+    //   - type: string (required, enum: ['MARKET_SALE', 'TOPUP'])
+    //   - amount: number (required)
+    //   - description: string (optional)
+    //   - date: timestamp (required)
+    //   - userId: string (required)
+    //   - stallId: string (optional)
+    //   - paymentMethod: string (required, enum: ['QRIS', 'WARGAPAY', 'POINTS', 'CASH'])
+    //
+    // Collection: market_reservations
+    // Document ID: {reservationId}
+    // Fields:
+    //   - tableId: string (required)
+    //   - userId: string (required)
+    //   - userName: string (required)
+    //   - startTime: timestamp (required)
+    //   - endTime: timestamp (optional)
+    //   - guests: number (required)
+    //   - status: string (required, enum: ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'])
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (request.auth.token.email == "usahayakupmakmur@gmail.com" && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Lurah / Admin'))
+        );
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidUrl(url) {
+      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'displayName', 'email', 'role', 'lastSeen']) &&
+             hasOnlyAllowedFields(['uid', 'displayName', 'photoURL', 'email', 'role', 'lastSeen', 'balance', 'points', 'wargaScore']) &&
+             data.uid == request.auth.uid &&
+             data.displayName is string && data.displayName.size() < 100 &&
+             isValidEmail(data.email) &&
+             data.lastSeen is timestamp;
+    }
+
+    function isValidTeamTask(data) {
+      return hasRequiredFields(['title', 'assignedTo', 'priority', 'status', 'category']) &&
+             data.title is string && data.title.size() < 200 &&
+             data.assignedTo is list && data.assignedTo.size() < 10 &&
+             data.priority in ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] &&
+             data.status in ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'] &&
+             data.category is string;
+    }
+
+    function isValidAsset(data) {
+      return hasRequiredFields(['name', 'type', 'status', 'condition']) &&
+             data.name is string && data.name.size() < 200 &&
+             data.type in ['VEHICLE', 'EQUIPMENT', 'BUILDING'] &&
+             data.status in ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'RETIRED'] &&
+             data.condition in ['EXCELLENT', 'GOOD', 'FAIR', 'POOR'];
+    }
+
+    function isValidBudget(data) {
+      return hasRequiredFields(['category', 'allocated', 'realized', 'status']) &&
+             data.category is string &&
+             data.allocated is number &&
+             data.realized is number &&
+             data.status is string;
+    }
+
+    function isValidStunting(data) {
+      return hasRequiredFields(['name', 'rate']) &&
+             data.name is string &&
+             data.rate is number;
+    }
+
+    function isValidActivity(data) {
+      return hasRequiredFields(['time', 'event', 'detail', 'createdAt']) &&
+             data.time is string &&
+             data.event is string &&
+             data.detail is string &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidReport(data) {
+      return hasRequiredFields(['type', 'title', 'description', 'location', 'coordinates', 'status', 'authorId', 'authorName', 'createdAt', 'votes', 'voters']) &&
+             hasOnlyAllowedFields(['type', 'title', 'description', 'location', 'coordinates', 'status', 'authorId', 'authorName', 'createdAt', 'votes', 'voters']) &&
+             data.type in ['INFRASTRUCTURE', 'HEALTH', 'TRASH', 'SECURITY'] &&
+             data.title is string && data.title.size() < 200 &&
+             data.description is string && data.description.size() < 2000 &&
+             data.location is string && data.location.size() < 200 &&
+             data.coordinates is map && data.coordinates.lat is number && data.coordinates.lng is number &&
+             data.status in ['PENDING', 'IN_PROGRESS', 'RESOLVED'] &&
+             data.authorId == request.auth.uid &&
+             data.authorName is string && data.authorName.size() < 100 &&
+             data.createdAt is timestamp &&
+             data.votes is number &&
+             data.voters is list && data.voters.size() < 1000;
+    }
+
+    function isValidPost(data) {
+      return hasRequiredFields(['authorId', 'authorName', 'content', 'likes', 'comments', 'shares', 'createdAt', 'likedBy']) &&
+             hasOnlyAllowedFields(['authorId', 'authorName', 'authorAvatar', 'content', 'image', 'likes', 'comments', 'shares', 'createdAt', 'likedBy']) &&
+             data.authorId == request.auth.uid &&
+             data.authorName is string && data.authorName.size() < 100 &&
+             data.content is string && data.content.size() < 5000 &&
+             data.likes is number &&
+             data.comments is number &&
+             data.shares is number &&
+             data.createdAt is timestamp &&
+             data.likedBy is list && data.likedBy.size() < 1000;
+    }
+
+    function isValidMessage(data) {
+      return hasRequiredFields(['senderId', 'receiverId', 'text', 'createdAt', 'read', 'isLocation']) &&
+             hasOnlyAllowedFields(['senderId', 'receiverId', 'text', 'createdAt', 'read', 'isLocation']) &&
+             data.senderId == request.auth.uid &&
+             data.receiverId is string &&
+             data.text is string && data.text.size() < 2000 &&
+             data.createdAt is timestamp &&
+             data.read is bool &&
+             data.isLocation is bool;
+    }
+
+    function isValidMarketStall(data) {
+      return hasRequiredFields(['name', 'owner', 'category', 'revenueToday', 'status']) &&
+             data.name is string &&
+             data.owner is string &&
+             data.category in ['KULINER', 'KERAJINAN', 'JASA', 'FASHION'] &&
+             data.revenueToday is number &&
+             data.status in ['OPEN', 'CLOSED'];
+    }
+
+    function isValidMarketLayoutItem(data) {
+      return hasRequiredFields(['type', 'label', 'x', 'y']) &&
+             data.type is string &&
+             data.label is string &&
+             data.x is number &&
+             data.y is number;
+    }
+
+    function isValidMarketTransaction(data) {
+      return hasRequiredFields(['type', 'amount', 'date', 'userId', 'paymentMethod']) &&
+             data.type in ['MARKET_SALE', 'TOPUP'] &&
+             data.amount is number &&
+             data.date is timestamp &&
+             data.userId is string &&
+             data.paymentMethod in ['QRIS', 'WARGAPAY', 'POINTS', 'CASH'];
+    }
+
+    function isValidMarketReservation(data) {
+      return hasRequiredFields(['tableId', 'userId', 'userName', 'startTime', 'guests', 'status']) &&
+             data.tableId is string &&
+             data.userId is string &&
+             data.userName is string &&
+             data.startTime is timestamp &&
+             data.guests is number &&
+             data.status in ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'];
+    }
+
+    // ===============================================================
+    // Collection Rules
+    // ===============================================================
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data);
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidReport(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (isValidReport(request.resource.data) && (isOwner(resource.data.authorId) || isAdmin())) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes', 'voters']) && 
+         math.abs(request.resource.data.votes - resource.data.votes) == 1)
+      );
+      allow delete: if isAuthenticated() && (isOwner(resource.data.authorId) || isAdmin());
+    }
+
+    match /posts/{postId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidPost(request.resource.data);
+      allow update: if isAuthenticated() && (
+        (isValidPost(request.resource.data) && (isOwner(resource.data.authorId) || isAdmin())) ||
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy']) && 
+         math.abs(request.resource.data.likes - resource.data.likes) == 1)
+      );
+      allow delete: if isAuthenticated() && (isOwner(resource.data.authorId) || isAdmin());
+    }
+
+    match /messages/{messageId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.senderId) || isOwner(resource.data.receiverId));
+      allow create: if isAuthenticated() && isValidMessage(request.resource.data);
+      allow update: if isAuthenticated() && isOwner(resource.data.receiverId) && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isAuthenticated() && isOwner(resource.data.senderId);
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /assets/{assetId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /budget/{budgetId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /stunting/{stuntingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /activities/{activityId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /stats/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /market_stalls/{stallId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /market_layout/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && 
+                    request.resource.data.status in ['AVAILABLE', 'OCCUPIED', 'ORDERING', 'DIRTY'];
+    }
+
+    match /market_transactions/{transactionId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidMarketTransaction(request.resource.data) && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    match /market_reservations/{reservationId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isValidMarketReservation(request.resource.data) && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin()) && isValidMarketReservation(request.resource.data);
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

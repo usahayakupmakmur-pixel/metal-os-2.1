@@ -1,0 +1,300 @@
+{
+  "entities": {
+    "Report": {
+      "title": "Community Report",
+      "description": "A report submitted by a community member about local issues.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["INFRASTRUCTURE", "HEALTH", "TRASH", "SECURITY"] },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "location": { "type": "string" },
+        "coordinates": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
+        },
+        "status": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "RESOLVED"] },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "votes": { "type": "integer" },
+        "voters": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["type", "title", "description", "location", "status", "authorId", "createdAt"]
+    },
+    "Post": {
+      "title": "Social Post",
+      "description": "A post in the community social feed.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "content": { "type": "string" },
+        "image": { "type": "string" },
+        "likes": { "type": "integer" },
+        "comments": { "type": "integer" },
+        "shares": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "likedBy": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["authorId", "authorName", "content", "createdAt"]
+    },
+    "Message": {
+      "title": "Chat Message",
+      "description": "A message sent between users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" }
+      },
+      "required": ["senderId", "receiverId", "text", "createdAt"]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "Public profile information for a community member.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "balance": { "type": "number" },
+        "points": { "type": "number" },
+        "wargaScore": { "type": "number" },
+        "lastSeen": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email"]
+    },
+    "TeamTask": {
+      "title": "Team Task",
+      "description": "A task assigned to a team member.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "assignedTo": { "type": "array", "items": { "type": "string" } },
+        "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "URGENT"] },
+        "status": { "type": "string", "enum": ["TODO", "IN_PROGRESS", "REVIEW", "DONE"] },
+        "dueDate": { "type": "string", "format": "date" },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" },
+            "address": { "type": "string" }
+          }
+        },
+        "category": { "type": "string" }
+      },
+      "required": ["title", "assignedTo", "priority", "status"]
+    },
+    "Asset": {
+      "title": "Asset",
+      "description": "A community asset or equipment.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["VEHICLE", "EQUIPMENT", "BUILDING"] },
+        "status": { "type": "string", "enum": ["AVAILABLE", "IN_USE", "MAINTENANCE", "RETIRED"] },
+        "condition": { "type": "string", "enum": ["EXCELLENT", "GOOD", "FAIR", "POOR"] },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" },
+            "address": { "type": "string" }
+          }
+        },
+        "lastMaintained": { "type": "string", "format": "date" },
+        "assignedTo": { "type": "string" },
+        "imageColor": { "type": "string" }
+      },
+      "required": ["name", "type", "status", "condition"]
+    },
+    "BudgetLineItem": {
+      "title": "Budget Line Item",
+      "description": "An item in the community budget.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "category": { "type": "string" },
+        "allocated": { "type": "number" },
+        "realized": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["category", "allocated", "realized"]
+    },
+    "StuntingData": {
+      "title": "Stunting Data",
+      "description": "Data point for stunting analysis.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "rate": { "type": "number" }
+      },
+      "required": ["name", "rate"]
+    },
+    "ActivityLog": {
+      "title": "Activity Log",
+      "description": "A log of community activity.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "time": { "type": "string" },
+        "event": { "type": "string" },
+        "detail": { "type": "string" },
+        "icon": { "type": "string" },
+        "color": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["event", "detail", "createdAt"]
+    },
+    "VillageStats": {
+      "title": "Village Stats",
+      "description": "Key metrics for the village.",
+      "type": "object",
+      "properties": {
+        "totalPenduduk": { "type": "number" },
+        "indeksDesa": { "type": "number" },
+        "logistik": { "type": "number" },
+        "peringatan": { "type": "number" }
+      }
+    },
+    "MarketStall": {
+      "title": "Market Stall",
+      "description": "Information about a stall in the market.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "owner": { "type": "string" },
+        "category": { "type": "string", "enum": ["KULINER", "KERAJINAN", "JASA", "FASHION"] },
+        "revenueToday": { "type": "number" },
+        "status": { "type": "string", "enum": ["OPEN", "CLOSED"] }
+      },
+      "required": ["name", "owner", "category", "status"]
+    },
+    "MarketLayoutItem": {
+      "title": "Market Layout Item",
+      "description": "An item in the market layout (stall, table, etc.).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string" },
+        "label": { "type": "string" },
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "width": { "type": "number" },
+        "height": { "type": "number" },
+        "rotation": { "type": "number" },
+        "status": { "type": "string" },
+        "linkedStallId": { "type": "string" },
+        "capacity": { "type": "number" }
+      },
+      "required": ["type", "label", "x", "y"]
+    },
+    "MarketTransaction": {
+      "title": "Market Transaction",
+      "description": "A transaction record for the market (sale or top-up).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["MARKET_SALE", "TOPUP"] },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "userId": { "type": "string" },
+        "stallId": { "type": "string" },
+        "paymentMethod": { "type": "string", "enum": ["QRIS", "WARGAPAY", "POINTS", "CASH"] }
+      },
+      "required": ["type", "amount", "date", "userId"]
+    },
+    "MarketReservation": {
+      "title": "Market Reservation",
+      "description": "A table reservation in the market.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "tableId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "guests": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"] }
+      },
+      "required": ["tableId", "userId", "startTime", "guests", "status"]
+    }
+  },
+  "firestore": {
+    "reports": {
+      "schema": "Report",
+      "description": "Collection of community reports."
+    },
+    "posts": {
+      "schema": "Post",
+      "description": "Collection of social feed posts."
+    },
+    "messages": {
+      "schema": "Message",
+      "description": "Collection of chat messages."
+    },
+    "users": {
+      "schema": "User",
+      "description": "Collection of user profiles."
+    },
+    "tasks": {
+      "schema": "TeamTask",
+      "description": "Collection of team tasks."
+    },
+    "assets": {
+      "schema": "Asset",
+      "description": "Collection of community assets."
+    },
+    "budget": {
+      "schema": "BudgetLineItem",
+      "description": "Collection of budget items."
+    },
+    "stunting": {
+      "schema": "StuntingData",
+      "description": "Collection of stunting data points."
+    },
+    "activities": {
+      "schema": "ActivityLog",
+      "description": "Collection of activity logs."
+    },
+    "stats": {
+      "schema": "VillageStats",
+      "description": "Singleton collection for village stats."
+    },
+    "market_stalls": {
+      "schema": "MarketStall",
+      "description": "Collection of market stalls."
+    },
+    "market_layout": {
+      "schema": "MarketLayoutItem",
+      "description": "Collection of market layout items."
+    },
+    "market_transactions": {
+      "schema": "MarketTransaction",
+      "description": "Collection of market transactions."
+    },
+    "market_reservations": {
+      "schema": "MarketReservation",
+      "description": "Collection of market reservations."
+    }
+  }
+}

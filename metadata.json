@@ -1,0 +1,9 @@
+{
+  "name": " MetalOS: Cognitive Governance Dashboard 2.1",
+  "description": "A comprehensive operating system for Kelurahan Yosomulyo integrating Governance, Creative Financing (Master Plan), Geospatial Insights, Economy (WargaPay), Environment (Warga-Enviro), and Social Services driven by the Pancadaya philosophy.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation",
+    "camera"
+  ]
+}
