@@ -1,331 +1,295 @@
 
-import React, { useState } from 'react';
-import { GraduationCap, BookOpen, Briefcase, Calendar, Play, Star, Users, Download, Search, Clock, MapPin, Award, X, User, CheckCircle, ChevronRight } from 'lucide-react';
-import { COURSES, SCHOOL_EVENTS, LIBRARY_CONTENT, MOCK_USER } from '../constants';
-import { CitizenProfile, SchoolEvent } from '../types';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Book, BookOpen, Video, Calendar, Clock, MapPin, User, Search, Filter, Plus, ArrowRight, CheckCircle, Award, Star, Download, Play, MessageSquare, Briefcase, Globe, Sparkles, Shield, Zap, GraduationCap, Library, TrendingUp } from 'lucide-react';
+import { MOCK_USER } from '../constants';
+import { CitizenProfile, Course, SchoolEvent, LibraryContent } from '../types';
+import GlassCard from '../src/components/GlassCard';
+import { subscribeToCourses } from '../src/services/courseService';
+import { subscribeToEvents } from '../src/services/eventService';
+import { subscribeToLibraryContent } from '../src/services/libraryService';
 
 interface EducationViewProps {
   user?: CitizenProfile;
 }
 
 const EducationView: React.FC<EducationViewProps> = ({ user = MOCK_USER }) => {
-  const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'LIBRARY' | 'COURSES' | 'EVENTS'>('DASHBOARD');
-  const [selectedEvent, setSelectedEvent] = useState<SchoolEvent | null>(null);
-  const [isAddedToCalendar, setIsAddedToCalendar] = useState(false);
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'library' | 'courses' | 'events'>('dashboard');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [events, setEvents] = useState<SchoolEvent[]>([]);
+  const [libraryContent, setLibraryContent] = useState<LibraryContent[]>([]);
 
-  const handleAddToCalendar = () => {
-      setIsAddedToCalendar(true);
-      // Simulate API call or external action
-      setTimeout(() => setIsAddedToCalendar(false), 3000);
-  };
-
-  const closeEventModal = () => {
-      setSelectedEvent(null);
-      setIsAddedToCalendar(false);
-  }
+  useEffect(() => {
+    const unsubCourses = subscribeToCourses(setCourses, console.error);
+    const unsubEvents = subscribeToEvents(setEvents, console.error);
+    const unsubLibrary = subscribeToLibraryContent(setLibraryContent, console.error);
+    return () => {
+      unsubCourses();
+      unsubEvents();
+      unsubLibrary();
+    };
+  }, []);
 
   return (
-    <div className="space-y-6 relative">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-violet-600 to-purple-600 text-white p-6 rounded-2xl shadow-lg">
-        <h2 className="text-3xl font-bold mb-2 flex items-center gap-2">
-          <GraduationCap size={32} /> Pendidikan & Literasi
-        </h2>
-        <p className="text-violet-100 max-w-2xl">
-          Pusat pembelajaran digital warga. Akses pustaka tanpa kuota, pelatihan vokasi pasar keahlian, dan informasi sekolah.
-        </p>
-      </div>
+    <div className="space-y-8 pb-20">
+      {/* Hero Section: Education Dashboard */}
+      <GlassCard className="bg-gradient-to-br from-blue-600/20 to-cyan-600/20 border-blue-500/30">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-blue-400">
+              <Shield size={20} className="animate-pulse" />
+              <span className="text-xs font-black uppercase tracking-[0.3em]">Education & Learning</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black text-white tracking-tighter">
+              Pusat <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Literasi</span>
+            </h2>
+            <p className="text-slate-400 max-w-xl text-sm md:text-base leading-relaxed">
+              Tingkatkan skill Anda dengan kursus online, akses ribuan buku digital, dan ikuti event edukasi menarik di desa kita.
+            </p>
+          </div>
+          <div className="flex gap-4 bg-white/5 p-4 rounded-3xl border border-white/10 backdrop-blur-md">
+            <div className="text-center px-4 border-r border-white/10">
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Kursus Selesai</p>
+                <div className="flex items-center gap-2 justify-center">
+                    <Award size={16} className="text-amber-500" />
+                    <span className="text-xl font-black text-white">12</span>
+                </div>
+            </div>
+            <div className="text-center px-4">
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mb-1">Poin Literasi</p>
+                <div className="flex items-center gap-2 justify-center">
+                    <Sparkles size={16} className="text-cyan-500" />
+                    <span className="text-xl font-black text-white">850</span>
+                </div>
+            </div>
+          </div>
+        </div>
+      </GlassCard>
 
-      {/* Navigation Tabs */}
-      <div className="flex space-x-1 bg-white p-1 rounded-xl border border-slate-200 w-full md:w-auto overflow-x-auto no-scrollbar">
-        {['DASHBOARD', 'LIBRARY', 'COURSES', 'EVENTS'].map((tab) => (
+      {/* Navigation Tabs - Ultra Tech Style */}
+      <div className="flex overflow-x-auto pb-2 md:pb-0 md:overflow-visible md:justify-start gap-2 w-full md:w-fit mx-auto md:mx-0 scrollbar-hide">
+        {[
+          { id: 'dashboard', label: 'Dashboard', icon: GraduationCap },
+          { id: 'library', label: 'Perpustakaan', icon: Library },
+          { id: 'courses', label: 'Kursus Online', icon: Play },
+          { id: 'events', label: 'Event Edukasi', icon: Calendar }
+        ].map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            className={`px-6 py-2.5 rounded-lg text-sm font-bold transition whitespace-nowrap flex-1 md:flex-none ${
-              activeTab === tab 
-              ? 'bg-violet-600 text-white shadow-md' 
-              : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as any)}
+            className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+              activeTab === tab.id 
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+              : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10'
             }`}
           >
-            {tab === 'DASHBOARD' ? 'Ringkasan' : tab === 'LIBRARY' ? 'Pustaka Digital' : tab === 'COURSES' ? 'Pasar Keahlian' : 'Agenda Sekolah'}
+            <tab.icon size={16} />
+            <span>{tab.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Content Area */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 min-h-[500px] p-6 relative">
-        
-        {/* DASHBOARD TAB */}
-        {activeTab === 'DASHBOARD' && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <div className="bg-blue-50 p-5 rounded-xl border border-blue-100 flex items-center gap-4">
-                     <div className="p-3 bg-blue-500 text-white rounded-full">
-                         <BookOpen size={24} />
-                     </div>
-                     <div>
-                         <p className="text-sm text-slate-500 font-bold uppercase">Total Koleksi</p>
-                         <p className="text-2xl font-black text-slate-800">1,240</p>
-                     </div>
-                 </div>
-                 <div className="bg-orange-50 p-5 rounded-xl border border-orange-100 flex items-center gap-4">
-                     <div className="p-3 bg-orange-500 text-white rounded-full">
-                         <Briefcase size={24} />
-                     </div>
-                     <div>
-                         <p className="text-sm text-slate-500 font-bold uppercase">Kursus Aktif</p>
-                         <p className="text-2xl font-black text-slate-800">12</p>
-                     </div>
-                 </div>
-                 <div className="bg-green-50 p-5 rounded-xl border border-green-100 flex items-center gap-4">
-                     <div className="p-3 bg-green-500 text-white rounded-full">
-                         <Users size={24} />
-                     </div>
-                     <div>
-                         <p className="text-sm text-slate-500 font-bold uppercase">Pelajar Terdaftar</p>
-                         <p className="text-2xl font-black text-slate-800">345</p>
-                     </div>
-                 </div>
-             </div>
-
-             <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg relative overflow-hidden">
-                 <div className="relative z-10">
-                     <h3 className="text-xl font-bold mb-2">Program Zero-Quota</h3>
-                     <p className="text-slate-300 text-sm max-w-lg mb-4">
-                         Akses ribuan materi pendidikan dan buku sekolah elektronik (BSE) melalui jaringan lokal Gapura tanpa mengurangi kuota internet pribadi.
-                     </p>
-                     <button onClick={() => setActiveTab('LIBRARY')} className="bg-white text-slate-900 px-4 py-2 rounded-lg font-bold text-sm hover:bg-slate-100 transition">
-                         Jelajahi Pustaka
-                     </button>
-                 </div>
-                 <div className="absolute right-0 top-0 opacity-10 transform translate-x-1/4 -translate-y-1/4">
-                     <BookOpen size={200} />
-                 </div>
-             </div>
-          </div>
-        )}
-
-        {/* LIBRARY TAB */}
-        {activeTab === 'LIBRARY' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-slate-800">Koleksi Digital</h3>
-                    <div className="relative">
-                        <Search className="absolute left-3 top-2.5 text-slate-400 w-4 h-4" />
-                        <input 
-                            type="text" 
-                            placeholder="Cari buku atau video..." 
-                            className="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none w-64"
-                        />
-                    </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {LIBRARY_CONTENT.map((item) => (
-                        <div key={item.id} className="group bg-white border border-slate-200 rounded-xl p-4 hover:shadow-md transition cursor-pointer">
-                            <div className="flex items-start gap-4">
-                                <div className={`w-12 h-12 rounded-lg flex items-center justify-center shrink-0 ${item.type === 'VIDEO' ? 'bg-red-100 text-red-600' : 'bg-blue-100 text-blue-600'}`}>
-                                    {item.type === 'VIDEO' ? <Play size={24} /> : <BookOpen size={24} />}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Main Content Area */}
+        <div className="lg:col-span-2 space-y-8">
+          <AnimatePresence mode="wait">
+            {activeTab === 'dashboard' && (
+              <motion.div
+                key="dashboard"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                {/* Continue Learning */}
+                <div className="space-y-4">
+                    <h3 className="text-xl font-black text-white tracking-tight">Lanjutkan Belajar</h3>
+                    <GlassCard className="bg-gradient-to-r from-blue-600/20 to-transparent border-blue-500/30">
+                        <div className="flex flex-col md:flex-row gap-6 items-center">
+                            <div className="w-full md:w-48 aspect-video rounded-2xl overflow-hidden relative group">
+                                <img src={courses[0]?.imageColor || 'https://picsum.photos/seed/py/400/225'} alt={courses[0]?.title} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Play size={32} className="text-white fill-white" />
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <h4 className="font-bold text-slate-800 text-sm line-clamp-2 mb-1 group-hover:text-violet-600 transition">{item.title}</h4>
-                                    <p className="text-xs text-slate-500 mb-2">{item.author}</p>
-                                    <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                                        <span className="bg-slate-100 px-2 py-0.5 rounded">{item.category}</span>
-                                        <span>{item.size}</span>
+                            </div>
+                            <div className="flex-1 space-y-2">
+                                <p className="text-[10px] text-blue-400 font-black uppercase tracking-widest">Kursus Sedang Berjalan</p>
+                                <h4 className="text-xl font-black text-white">{courses[0]?.title}</h4>
+                                <div className="flex items-center gap-4 text-xs text-slate-500 font-bold">
+                                    <span className="flex items-center gap-1"><User size={14} /> {courses[0]?.instructor}</span>
+                                    <span className="flex items-center gap-1"><Clock size={14} /> {courses[0]?.duration}</span>
+                                </div>
+                                <div className="pt-4">
+                                    <div className="flex justify-between text-[10px] text-slate-500 font-black uppercase tracking-widest mb-2">
+                                        <span>Progress: 65%</span>
+                                        <span>12/18 Materi</span>
+                                    </div>
+                                    <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                        <div className="bg-blue-500 h-full w-[65%] rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
                                     </div>
                                 </div>
-                                <button className="text-slate-300 hover:text-violet-600 transition">
-                                    <Download size={20} />
-                                </button>
                             </div>
+                            <button className="bg-white text-blue-600 p-4 rounded-2xl shadow-xl hover:bg-blue-50 transition-colors">
+                                <Play size={24} className="fill-blue-600" />
+                            </button>
                         </div>
-                    ))}
+                    </GlassCard>
                 </div>
-            </div>
-        )}
 
-        {/* COURSES TAB (SKILL MARKET) */}
-        {activeTab === 'COURSES' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <div className="flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-slate-800">Pasar Keahlian Warga</h3>
-                    <button className="bg-violet-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-violet-700 shadow-lg shadow-violet-600/20">
-                        Daftar Jadi Pengajar
+                {/* Recommended Courses */}
+                <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-xl font-black text-white tracking-tight">Kursus Populer</h3>
+                        <button className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors">Lihat Semua</button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {courses.slice(1).map((course, i) => (
+                            <GlassCard key={course.id} className="group cursor-pointer hover:border-blue-500/30 transition-all p-0 overflow-hidden">
+                                <div className="aspect-video relative overflow-hidden">
+                                    <img src={course.imageColor || 'https://picsum.photos/seed/py/400/225'} alt={course.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                    <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-xl border border-white/10">
+                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{course.price === 0 ? 'Gratis' : `Rp ${course.price}`}</span>
+                                    </div>
+                                </div>
+                                <div className="p-6">
+                                    <h4 className="font-black text-white text-lg group-hover:text-blue-400 transition-colors line-clamp-1">{course.title}</h4>
+                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">{course.instructor}</p>
+                                    <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/5">
+                                        <div className="flex items-center gap-1">
+                                            <Star size={12} className="text-amber-400 fill-amber-400" />
+                                            <span className="text-xs font-black text-white">{course.rating}</span>
+                                            <span className="text-[10px] text-slate-500 font-bold ml-1">({course.students})</span>
+                                        </div>
+                                        <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1">
+                                            Daftar <ArrowRight size={12} />
+                                        </span>
+                                    </div>
+                                </div>
+                            </GlassCard>
+                        ))}
+                    </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'library' && (
+              <motion.div
+                key="library"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-6"
+              >
+                <div className="flex flex-col md:flex-row gap-4 mb-8">
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input 
+                            type="text" 
+                            placeholder="Cari judul buku, pengarang, atau kategori..." 
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white font-bold focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                        />
+                    </div>
+                    <button className="bg-white/5 border border-white/10 rounded-2xl px-6 py-4 text-slate-400 hover:text-white flex items-center gap-2 font-black text-xs uppercase tracking-widest transition-all">
+                        <Filter size={18} /> Filter
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {COURSES.map((course) => (
-                        <div key={course.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden hover:shadow-lg transition group">
-                            <div className={`h-32 ${course.imageColor} relative`}>
-                                <div className="absolute top-3 right-3 bg-white/90 backdrop-blur px-2 py-1 rounded text-xs font-bold text-slate-700">
-                                    {course.level}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+                    {libraryContent.map((item) => (
+                        <div key={item.id} className="group cursor-pointer">
+                            <div className="aspect-[3/4] rounded-2xl overflow-hidden relative mb-3 shadow-xl group-hover:shadow-blue-500/20 transition-all">
+                                <img src={`https://picsum.photos/seed/${item.id}/300/400`} alt={item.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
+                                    <button className="w-full bg-blue-500 text-white py-2 rounded-xl font-black text-[10px] uppercase tracking-widest">Baca Sekarang</button>
                                 </div>
                             </div>
-                            <div className="p-5">
-                                <div className="flex items-center gap-2 text-[10px] font-bold text-violet-600 mb-2 uppercase tracking-wider">
-                                    <Award size={12} /> {course.category}
-                                </div>
-                                <h3 className="font-bold text-slate-800 text-lg mb-2 line-clamp-2">{course.title}</h3>
-                                <p className="text-sm text-slate-500 mb-4">Oleh: {course.instructor}</p>
-                                
-                                <div className="flex items-center justify-between text-xs text-slate-500 mb-4 border-t border-slate-100 pt-4">
-                                    <span className="flex items-center gap-1"><Clock size={14} /> {course.duration}</span>
-                                    <span className="flex items-center gap-1"><Users size={14} /> {course.students} Siswa</span>
-                                    <span className="flex items-center gap-1 text-yellow-500 font-bold"><Star size={14} fill="currentColor" /> {course.rating}</span>
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <span className="font-bold text-lg text-slate-800">
-                                        {course.price === 0 ? 'GRATIS' : `Rp ${course.price.toLocaleString()}`}
-                                    </span>
-                                    <button className="bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition">
-                                        Ikuti Kelas
-                                    </button>
-                                </div>
-                            </div>
+                            <h4 className="font-bold text-white text-sm line-clamp-1 group-hover:text-blue-400 transition-colors">{item.title}</h4>
+                            <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">{item.author}</p>
                         </div>
                     ))}
                 </div>
-            </div>
-        )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-        {/* EVENTS TAB */}
-        {activeTab === 'EVENTS' && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                <h3 className="text-lg font-bold text-slate-800">Agenda Sekolah & Kegiatan</h3>
+        {/* Right Column: Stats & Events */}
+        <div className="space-y-8">
+          {/* Learning Progress */}
+          <GlassCard>
+            <h3 className="text-lg font-black text-white tracking-tight mb-6 flex items-center gap-2">
+              <TrendingUp className="text-blue-400" size={20} />
+              Statistik Belajar
+            </h3>
+            <div className="space-y-6">
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                    <div className="flex justify-between items-center mb-4">
+                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Target Mingguan</span>
+                        <span className="text-xs font-black text-white">85%</span>
+                    </div>
+                    <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                        <div className="bg-emerald-500 h-full w-[85%] rounded-full"></div>
+                    </div>
+                </div>
+                
                 <div className="space-y-4">
-                    {SCHOOL_EVENTS.map((event) => (
-                        <div key={event.id} className="flex flex-col md:flex-row bg-white border border-slate-200 rounded-xl overflow-hidden hover:border-violet-200 transition group">
-                            <div className="bg-slate-50 p-6 flex flex-col items-center justify-center min-w-[120px] border-b md:border-b-0 md:border-r border-slate-200 group-hover:bg-violet-50 transition">
-                                <span className="text-sm font-bold text-slate-500 uppercase group-hover:text-violet-600">{new Date(event.date).toLocaleString('default', { month: 'short' })}</span>
-                                <span className="text-3xl font-black text-slate-800 group-hover:text-violet-700">{new Date(event.date).getDate()}</span>
-                                <span className="text-xs text-slate-400">{new Date(event.date).getFullYear()}</span>
-                            </div>
-                            <div className="p-6 flex-1 flex flex-col justify-center">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                                        event.type === 'ACADEMIC' ? 'bg-blue-100 text-blue-700' :
-                                        event.type === 'SPORTS' ? 'bg-green-100 text-green-700' :
-                                        'bg-purple-100 text-purple-700'
-                                    }`}>
-                                        {event.type}
-                                    </span>
-                                </div>
-                                <h4 className="text-xl font-bold text-slate-800 mb-2">{event.title}</h4>
-                                <div className="flex items-center text-sm text-slate-500 gap-4">
-                                    <span className="flex items-center gap-1"><Clock size={14} /> 08:00 WIB</span>
-                                    <span className="flex items-center gap-1"><MapPin size={14} /> {event.location}</span>
-                                </div>
-                            </div>
-                            <div className="p-6 flex items-center justify-center bg-slate-50 md:bg-transparent">
-                                <button 
-                                    onClick={() => setSelectedEvent(event)}
-                                    className="w-full md:w-auto border border-slate-300 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-100 transition hover:text-slate-900"
-                                >
-                                    Detail
-                                </button>
-                            </div>
+                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest">Pencapaian Terbaru</p>
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                        <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center border border-amber-500/20">
+                            <Award size={18} className="text-amber-400" />
                         </div>
-                    ))}
+                        <div>
+                            <p className="text-xs font-bold text-white">Top 10% Literasi Desa</p>
+                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-0.5">Maret 2024</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 border border-white/5">
+                        <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center border border-blue-500/20">
+                            <CheckCircle size={18} className="text-blue-400" />
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-white">Sertifikat Python Dasar</p>
+                            <p className="text-[9px] text-slate-500 font-black uppercase tracking-widest mt-0.5">15 Feb 2024</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-        )}
+            <button className="w-full mt-6 bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] transition-all border border-white/10">
+              Lihat Semua Sertifikat
+            </button>
+          </GlassCard>
 
-        {/* EVENT DETAIL MODAL */}
-        {selectedEvent && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-                <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                    {/* Modal Header */}
-                    <div className="bg-slate-900 text-white p-6 relative">
-                        <button 
-                            onClick={closeEventModal}
-                            className="absolute top-4 right-4 p-1 bg-white/10 hover:bg-white/20 rounded-full transition"
-                        >
-                            <X size={20} />
-                        </button>
-                        <div className="mb-2">
-                            <span className={`text-[10px] font-bold px-2 py-1 rounded uppercase ${
-                                selectedEvent.type === 'ACADEMIC' ? 'bg-blue-500' :
-                                selectedEvent.type === 'SPORTS' ? 'bg-green-500' :
-                                'bg-purple-500'
+          {/* Upcoming Events */}
+          <GlassCard className="bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20">
+            <h3 className="text-lg font-black text-white tracking-tight mb-6 flex items-center gap-2">
+              <Calendar className="text-purple-400" size={20} />
+              Event Edukasi
+            </h3>
+            <div className="space-y-4">
+                {events.map((event, i) => (
+                    <div key={event.id} className="p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
+                        <div className="flex justify-between items-start mb-2">
+                            <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${
+                                event.type === 'ACADEMIC' ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'
                             }`}>
-                                {selectedEvent.type}
+                                {event.type}
                             </span>
+                            <span className="text-[10px] text-slate-500 font-bold">{event.date}</span>
                         </div>
-                        <h3 className="text-xl font-bold leading-tight">{selectedEvent.title}</h3>
-                        <div className="flex items-center gap-4 mt-4 text-sm text-slate-300">
-                            <div className="flex items-center gap-1.5"><Calendar size={14} /> {new Date(selectedEvent.date).toLocaleDateString()}</div>
-                            <div className="flex items-center gap-1.5"><MapPin size={14} /> {selectedEvent.location}</div>
+                        <h4 className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors">{event.title}</h4>
+                        <div className="flex items-center gap-3 mt-3 text-[10px] text-slate-500 font-black uppercase tracking-widest">
+                            <span className="flex items-center gap-1"><Clock size={12} /> {event.schedule && event.schedule.length > 0 ? event.schedule[0].time : 'N/A'}</span>
+                            <span className="flex items-center gap-1"><MapPin size={12} /> {event.location}</span>
                         </div>
                     </div>
-
-                    {/* Modal Body */}
-                    <div className="p-6 overflow-y-auto bg-slate-50 flex-1">
-                        {selectedEvent.description && (
-                            <div className="mb-6">
-                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Deskripsi</h4>
-                                <p className="text-sm text-slate-700 leading-relaxed bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                    {selectedEvent.description}
-                                </p>
-                            </div>
-                        )}
-
-                        {selectedEvent.speaker && (
-                            <div className="mb-6">
-                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Pembicara / Tamu</h4>
-                                <div className="flex items-center gap-3 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
-                                    <div className="bg-violet-100 p-2 rounded-full text-violet-600">
-                                        <User size={20} />
-                                    </div>
-                                    <span className="font-bold text-slate-800 text-sm">{selectedEvent.speaker}</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {selectedEvent.schedule && selectedEvent.schedule.length > 0 && (
-                            <div className="mb-6">
-                                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Susunan Acara</h4>
-                                <div className="space-y-0 bg-white rounded-xl border border-slate-200 overflow-hidden">
-                                    {selectedEvent.schedule.map((item, idx) => (
-                                        <div key={idx} className="flex p-3 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition">
-                                            <div className="w-16 text-xs font-mono font-bold text-slate-500 pt-0.5">{item.time}</div>
-                                            <div className="flex-1 text-sm text-slate-800 font-medium">{item.activity}</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Modal Footer */}
-                    <div className="p-4 bg-white border-t border-slate-200">
-                        <button 
-                            onClick={handleAddToCalendar}
-                            disabled={isAddedToCalendar}
-                            className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-lg ${
-                                isAddedToCalendar 
-                                ? 'bg-green-600 text-white' 
-                                : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'
-                            }`}
-                        >
-                            {isAddedToCalendar ? (
-                                <>
-                                    <CheckCircle size={18} /> Tersimpan di Kalender
-                                </>
-                            ) : (
-                                <>
-                                    <Calendar size={18} /> Tambahkan ke Kalender
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </div>
+                ))}
             </div>
-        )}
-
+            <button className="w-full mt-6 bg-purple-500 hover:bg-purple-400 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-purple-500/20">
+              Lihat Kalender Event
+            </button>
+          </GlassCard>
+        </div>
       </div>
     </div>
   );

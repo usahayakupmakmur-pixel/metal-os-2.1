@@ -1,14 +1,16 @@
-import { BudgetLineItem, CitizenProfile, IotSensor, LibraryContent, Transaction, TransactionType, CastZone, SharedFile, MarketplaceItem, WargaContact, SocialReport, RondaSchedule, SecurityCamera, PatrolLog, MarketStall, MarketLayoutItem, ParkingZone, HealthQueue, Doctor, PosyanduSchedule, ServiceProvider, Course, SchoolEvent, CityMetric, CreativeFinancingProject, OpdRole, TeamTask, Asset } from './types';
+import { BudgetLineItem, CitizenProfile, IotSensor, LibraryContent, Transaction, TransactionType, CastZone, SharedFile, MarketplaceItem, WargaContact, SocialReport, RondaSchedule, SecurityCamera, PatrolLog, MarketStall, MarketLayoutItem, ParkingZone, HealthQueue, Doctor, PosyanduSchedule, ServiceProvider, Course, SchoolEvent, CityMetric, CreativeFinancingProject, OpdRole, TeamTask, Asset, BerdayaOrder, BerdayaImpact, VisitorLog, SecurityAlert } from './types';
 
 export const MOCK_USER: CitizenProfile = {
   id: 'u1',
   name: "Budi Santoso",
   wargaScore: 785,
   role: "Warga Berdaya",
+  userType: 'citizen',
   balance: 1500000,
   points: 120,
   avatarSeed: 'Budi',
-  mandiriVA: '880012345678'
+  mandiriVA: '880012345678',
+  kelurahan: 'Yosomulyo'
 };
 
 export const AVAILABLE_USERS: CitizenProfile[] = [
@@ -17,31 +19,83 @@ export const AVAILABLE_USERS: CitizenProfile[] = [
     name: "Budi Santoso",
     wargaScore: 785,
     role: "Warga Berdaya", // Middle class / General Citizen
+    userType: 'citizen',
     balance: 1500000,
     points: 120,
     avatarSeed: 'Budi',
-    mandiriVA: '880012345678'
+    mandiriVA: '880012345678',
+    kelurahan: 'Yosomulyo',
+    phone: '+62 812-3456-7890',
+    email: 'budi.santoso@yosomulyo.id',
+    address: 'Jl. Melati No. 12, RT 07 RW 02, Yosomulyo',
+    bio: 'Warga aktif yang peduli dengan kebersihan lingkungan dan kemajuan ekonomi desa.',
+    nik: '1871010101900001',
+    birthDate: '1990-01-01',
+    gender: 'Laki-laki',
+    occupation: 'Wirausaha Muda',
+    achievements: [
+      { id: 'a1', title: 'Warga Teladan', icon: '🏆', date: '2024-03-12' },
+      { id: 'a2', title: 'Pahlawan Kebersihan', icon: '🌱', date: '2024-02-05' }
+    ]
   },
   {
     id: 'u2',
     name: "H. Joko Purnomo",
     wargaScore: 950,
     role: "Lurah / Admin", // Administrator
+    userType: 'government',
     balance: 15000000,
     points: 500,
     avatarSeed: 'Joko',
-    mandiriVA: '880087654321'
+    mandiriVA: '880087654321',
+    kelurahan: 'Yosomulyo',
+    phone: '+62 811-9988-7766',
+    email: 'joko.purnomo@yosomulyo.id',
+    address: 'Rumah Dinas Lurah, Yosomulyo',
+    bio: 'Melayani warga dengan sepenuh hati demi Yosomulyo yang lebih maju dan digital.',
+    nik: '1871010101700001',
+    birthDate: '1970-05-15',
+    gender: 'Laki-laki',
+    occupation: 'Lurah Yosomulyo',
+    achievements: [
+      { id: 'a3', title: 'Pemimpin Digital', icon: '⚡', date: '2024-01-15' }
+    ]
   },
   {
     id: 'u3',
     name: "Siti Aminah",
     wargaScore: 820,
     role: "Warga Berkarya", // MSME / Business Owner
+    userType: 'business_entity',
     balance: 3200000,
     points: 210,
     avatarSeed: 'Siti',
-    mandiriVA: '880011223344'
+    mandiriVA: '880011223344',
+    kelurahan: 'Yosomulyo',
+    phone: '+62 857-1122-3344',
+    email: 'siti.aminah@yosomulyo.id',
+    address: 'Jl. Mawar No. 5, RT 03 RW 01, Yosomulyo',
+    bio: 'Penggiat UMKM Keripik Pisang. Mari berdayakan produk lokal!',
+    nik: '1871014101850001',
+    birthDate: '1985-08-20',
+    gender: 'Perempuan',
+    occupation: 'Pemilik UMKM',
+    achievements: [
+      { id: 'a4', title: 'Investor Lokal', icon: '💰', date: '2024-01-20' }
+    ]
   }
+];
+
+export const VISITOR_LOGS: VisitorLog[] = [
+    { id: 'v1', name: 'Budi Santoso', type: 'RESIDENT', time: '10:15', method: 'WIFI', status: 'AUTHORIZED' },
+    { id: 'v2', name: 'Grab Express', type: 'DELIVERY', time: '10:22', method: 'CAMERA', status: 'AUTHORIZED', vehiclePlate: 'B 1234 XYZ' },
+    { id: 'v3', name: 'Unknown Person', type: 'UNKNOWN', time: '10:30', method: 'CAMERA', status: 'FLAGGED' },
+    { id: 'v4', name: 'Siti Aminah', type: 'GUEST', time: '10:45', method: 'MANUAL', status: 'PENDING' },
+];
+
+export const SECURITY_ALERTS: SecurityAlert[] = [
+    { id: 'a1', type: 'MOTION', location: 'Gudang Mocaf', time: '02:15', severity: 'MEDIUM', status: 'RESOLVED' },
+    { id: 'a2', type: 'UNAUTHORIZED_ACCESS', location: 'Gapura RW 07', time: '03:45', severity: 'HIGH', status: 'ACTIVE' },
 ];
 
 export const BUDGET_DATA: BudgetLineItem[] = [
@@ -373,10 +427,10 @@ export const MARKET_LAYOUT_DATA: MarketLayoutItem[] = [
 ];
 
 export const PARKING_ZONES: ParkingZone[] = [
-    { id: 'pz1', name: 'Parkir Utama Pasar', attendant: 'Jupri', capacity: 50, occupied: 42, revenueToday: 210000, status: 'OPEN', coordinates: { x: 25, y: 30 }, realCoordinates: { lat: -5.1175, lng: 105.3065 }, merchantId: 'LM-001' },
-    { id: 'pz2', name: 'Halaman Balai Desa', attendant: 'Rohman', capacity: 30, occupied: 12, revenueToday: 65000, status: 'OPEN', coordinates: { x: 70, y: 30 }, realCoordinates: { lat: -5.1188, lng: 105.3075 }, merchantId: 'LM-002' },
-    { id: 'pz3', name: 'Area Mocaf Hub', attendant: 'Slamet', capacity: 20, occupied: 5, revenueToday: 25000, status: 'OPEN', coordinates: { x: 50, y: 75 }, realCoordinates: { lat: -5.1195, lng: 105.3080 }, merchantId: 'LM-003' },
-    { id: 'pz4', name: 'Parkir VIP Tamu', attendant: 'Auto-Gate', capacity: 10, occupied: 10, revenueToday: 150000, status: 'FULL', coordinates: { x: 40, y: 15 }, realCoordinates: { lat: -5.1165, lng: 105.3070 }, merchantId: 'LM-004' },
+    { id: 'pz1', name: 'Parkir Utama Pasar', attendant: 'Jupri', capacity: 50, occupied: 42, revenueToday: 210000, status: 'OPEN', coordinates: { x: 25, y: 30 }, realCoordinates: { lat: -5.1175, lng: 105.3065 }, merchantId: 'LM-001', price: 2000 },
+    { id: 'pz2', name: 'Halaman Balai Desa', attendant: 'Rohman', capacity: 30, occupied: 12, revenueToday: 65000, status: 'OPEN', coordinates: { x: 70, y: 30 }, realCoordinates: { lat: -5.1188, lng: 105.3075 }, merchantId: 'LM-002', price: 2000 },
+    { id: 'pz3', name: 'Area Mocaf Hub', attendant: 'Slamet', capacity: 20, occupied: 5, revenueToday: 25000, status: 'OPEN', coordinates: { x: 50, y: 75 }, realCoordinates: { lat: -5.1195, lng: 105.3080 }, merchantId: 'LM-003', price: 2000 },
+    { id: 'pz4', name: 'Parkir VIP Tamu', attendant: 'Auto-Gate', capacity: 10, occupied: 10, revenueToday: 150000, status: 'FULL', coordinates: { x: 40, y: 15 }, realCoordinates: { lat: -5.1165, lng: 105.3070 }, merchantId: 'LM-004', price: 5000 },
 ];
 
 export const HEALTH_QUEUES: HealthQueue[] = [
@@ -620,6 +674,51 @@ export const ASSETS: Asset[] = [
     imageColor: 'bg-blue-500'
   }
 ];
+
+export const BERDAYA_ORDERS: BerdayaOrder[] = [
+  {
+    id: 'ord1',
+    type: 'PRODUCT',
+    itemId: 'm1',
+    itemName: 'Tepung Mocaf Premium',
+    price: 15000,
+    quantity: 2,
+    total: 30000,
+    status: 'SHIPPING',
+    date: '2023-10-25 10:00',
+    sellerId: 's1',
+    sellerName: 'KSU Warga Berdaya',
+    buyerId: 'u1',
+    buyerName: 'Budi Santoso',
+    paymentMethod: 'WARGAPAY',
+    deliveryId: 'anj1',
+    trackingNumber: 'ANJ-123456'
+  },
+  {
+    id: 'ord2',
+    type: 'SERVICE',
+    itemId: 'sv1',
+    itemName: 'Bengkel Motor Pak Bejo',
+    price: 50000,
+    quantity: 1,
+    total: 50000,
+    status: 'COMPLETED',
+    date: '2023-10-24 14:00',
+    sellerId: 'sv1',
+    sellerName: 'Bengkel Motor Pak Bejo',
+    buyerId: 'u1',
+    buyerName: 'Budi Santoso',
+    paymentMethod: 'QRIS'
+  }
+];
+
+export const BERDAYA_IMPACT: BerdayaImpact = {
+  totalRevenue: 1250000000,
+  jobsCreated: 142,
+  msmesSupported: 58,
+  socialContribution: 25000000,
+  carbonReduced: 1250
+};
 
 export const FLOOD_AREAS = [
   { id: 'f1', title: 'Titik Genangan RW 02', position: { lat: -5.1150, lng: 105.3040 }, severity: 'LOW', status: 'SAFE' },

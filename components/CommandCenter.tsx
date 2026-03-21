@@ -17,7 +17,7 @@ const CommandCenter: React.FC<CommandCenterProps> = ({ isOpen, onClose, onNaviga
     { id: 'dash', label: 'Go to Dashboard', icon: LayoutDashboard, view: ViewMode.DASHBOARD, shortcut: 'D' },
     { id: 'gov', label: 'Governance Panel', icon: Building2, view: ViewMode.GOVERNANCE, shortcut: 'G' },
     { id: 'econ', label: 'Financial Overview', icon: Wallet, view: ViewMode.ECONOMY, shortcut: 'E' },
-    { id: 'market', label: 'Pasar Payungi', icon: ShoppingBag, view: ViewMode.MARKET, shortcut: 'M' },
+    { id: 'market', label: 'Pasar Payungi', icon: ShoppingBag, view: ViewMode.SMART_HUB, shortcut: 'M' },
     { id: 'social', label: 'Social Reports', icon: Users, view: ViewMode.SOCIAL, shortcut: 'S' },
     { id: 'sys', label: 'Kernel System', icon: Cpu, view: ViewMode.SYSTEM, shortcut: 'K' },
     { id: 'settings', label: 'System Settings', icon: Settings, view: ViewMode.SETTINGS, shortcut: ',' },

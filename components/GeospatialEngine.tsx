@@ -16,7 +16,11 @@ import {
   Activity,
   Phone,
   MessageSquare,
-  Share2
+  Share2,
+  Globe,
+  Zap,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 
 // Fix Leaflet default icon issue
@@ -70,6 +74,15 @@ interface GeospatialEngineProps {
   onDrawingModeChange?: (mode: any) => void;
   onShareLocation?: () => void;
   interactive?: boolean;
+  isGeeMode?: boolean;
+  geeLayers?: {
+    ndvi: boolean;
+    nightlights: boolean;
+    landcover: boolean;
+    water: boolean;
+    terrain: boolean;
+    population: boolean;
+  };
 }
 
 // Component to handle map view updates
@@ -121,7 +134,9 @@ const GeospatialEngine: React.FC<GeospatialEngineProps> = ({
   drawingMode = 'NAVIGATE',
   onDrawingModeChange,
   onShareLocation,
-  interactive = true
+  interactive = true,
+  isGeeMode = false,
+  geeLayers = { ndvi: false, nightlights: false, landcover: false, water: false, terrain: false, population: false }
 }) => {
   // Combine markers and points for rendering
   const allMarkers = [...markers, ...points];
@@ -140,10 +155,67 @@ const GeospatialEngine: React.FC<GeospatialEngineProps> = ({
         boxZoom={interactive}
         keyboard={interactive}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        {/* Base Layers */}
+        {!isGeeMode ? (
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+        ) : (
+          <TileLayer
+            attribution='&copy; Google Earth Engine'
+            url="https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+          />
+        )}
+
+        {/* GEE Specialized Layers (Simulated) */}
+        {isGeeMode && geeLayers.ndvi && (
+          <TileLayer
+            opacity={0.6}
+            attribution='&copy; GEE NDVI'
+            url="https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg"
+          />
+        )}
+
+        {isGeeMode && geeLayers.nightlights && (
+          <TileLayer
+            opacity={0.8}
+            attribution='&copy; GEE Night Lights'
+            url="https://map1.vis.earthdata.nasa.gov/wmts-webmerc/VIIRS_CityLights_2012/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpg"
+          />
+        )}
+
+        {isGeeMode && geeLayers.landcover && (
+          <TileLayer
+            opacity={0.5}
+            attribution='&copy; GEE Land Cover'
+            url="https://tiles.maps.eox.at/wmts/1.0.0/coastline_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.png"
+          />
+        )}
+
+        {isGeeMode && geeLayers.water && (
+          <TileLayer
+            opacity={0.7}
+            attribution='&copy; GEE Water Index'
+            url="https://tiles.maps.eox.at/wmts/1.0.0/hydrography_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.png"
+          />
+        )}
+
+        {isGeeMode && geeLayers.terrain && (
+          <TileLayer
+            opacity={0.4}
+            attribution='&copy; GEE Terrain'
+            url="https://tiles.maps.eox.at/wmts/1.0.0/terrain-light_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg"
+          />
+        )}
+        
+        {isGeeMode && geeLayers.population && (
+          <TileLayer
+            opacity={0.6}
+            attribution='&copy; GEE Population'
+            url="https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/GoogleMapsCompatible/{z}/{y}/{x}.jpg"
+          />
+        )}
         
         <MapController center={center} zoom={zoom} />
         

@@ -21,25 +21,28 @@ import {
   Share2,
   Scan,
   Phone,
-  MessageSquare
+  MessageSquare,
+  Globe
 } from 'lucide-react';
-import { TEAM_TASKS, ASSETS } from '../constants';
-import { TeamTask, Asset } from '../types';
+import { TEAM_TASKS, ASSETS, MOCK_USER } from '../constants';
+import { TeamTask, Asset, CitizenProfile } from '../types';
 import GeospatialEngine from '../components/GeospatialEngine';
 
 const CENTER = { lat: -5.1186, lng: 105.3072 };
 
 interface TrackerViewProps {
+  user?: CitizenProfile;
   onOpenScanner?: () => void;
 }
 
-const TrackerView: React.FC<TrackerViewProps> = ({ onOpenScanner }) => {
+const TrackerView: React.FC<TrackerViewProps> = ({ user = MOCK_USER, onOpenScanner }) => {
   const [selectedItem, setSelectedItem] = useState<{ type: 'TASK' | 'ASSET' | 'DRIVER'; title: string; data: any } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeLayers, setActiveLayers] = useState({
     tasks: true,
     assets: true,
-    drivers: true
+    drivers: true,
+    gee: false
   });
   const [driverPos, setDriverPos] = useState({ lat: -5.1186, lng: 105.3072 });
 
@@ -153,6 +156,8 @@ const TrackerView: React.FC<TrackerViewProps> = ({ onOpenScanner }) => {
           <GeospatialEngine 
             center={selectedItem?.data?.location ? { lat: selectedItem.data.location.lat, lng: selectedItem.data.location.lng } : CENTER}
             zoom={15}
+            isGeeMode={activeLayers.gee}
+            geeLayers={{ ndvi: false, nightlights: true, landcover: false, water: false, terrain: false, population: false }}
             markers={mapPoints}
             onMarkerClick={(marker) => setSelectedItem({ type: marker.type as any, title: marker.title, data: marker.data })}
             onShareLocation={handleShareLocation}
@@ -221,6 +226,18 @@ const TrackerView: React.FC<TrackerViewProps> = ({ onOpenScanner }) => {
                   </div>
                   <div className={`w-8 h-4 rounded-full relative transition-colors ${activeLayers.drivers ? 'bg-amber-500' : 'bg-slate-700'}`}>
                     <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${activeLayers.drivers ? 'right-0.5' : 'left-0.5'}`}></div>
+                  </div>
+                </button>
+                <button 
+                  onClick={() => setActiveLayers(prev => ({ ...prev, gee: !prev.gee }))}
+                  className={`w-full flex items-center justify-between p-2 rounded-xl transition-all ${activeLayers.gee ? 'bg-cyan-500/20 border-cyan-500/30' : 'opacity-40'} border`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Globe className="w-4 h-4 text-cyan-400" />
+                    <span className="text-xs font-medium text-slate-300">Google Earth Engine</span>
+                  </div>
+                  <div className={`w-8 h-4 rounded-full relative transition-colors ${activeLayers.gee ? 'bg-cyan-500' : 'bg-slate-700'}`}>
+                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${activeLayers.gee ? 'right-0.5' : 'left-0.5'}`}></div>
                   </div>
                 </button>
               </div>

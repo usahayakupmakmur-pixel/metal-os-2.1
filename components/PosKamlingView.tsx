@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Siren, Shield, Eye, Video, MapPin, Phone, Users, Calendar, AlertTriangle, CheckCircle, Clock, Volume2, Radio, QrCode, Battery, Plus, X, FileText, Send, BellRing, Search, ChevronRight } from 'lucide-react';
 import { SECURITY_CAMERAS, RONDA_SCHEDULES, PATROL_LOGS, MOCK_USER } from '../constants';
-import { CitizenProfile, RondaSchedule, PatrolLog } from '../types';
+import { CitizenProfile, RondaSchedule, PatrolLog, SecurityCamera } from '../types';
+import { db, auth, collection, onSnapshot, query, addDoc, handleFirestoreError, OperationType, orderBy, Timestamp } from '../firebase';
 
 const PATROL_LOCATIONS = ['Pos Induk', 'Portal Utara', 'Pasar Payungi', 'Perbatasan RW 06', 'Gudang Mocaf', 'Jalan Utama', 'Gang Kancil'];
 
@@ -21,11 +22,47 @@ const PosKamlingView: React.FC<PosKamlingViewProps> = ({
   const [panicCountdown, setPanicCountdown] = useState(5);
   const [broadcastStatus, setBroadcastStatus] = useState<'IDLE' | 'SENDING' | 'SENT'>('IDLE');
   
-  const [logs, setLogs] = useState<PatrolLog[]>(PATROL_LOGS);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  // Real-time data from Firestore
+  const [logs, setLogs] = useState<PatrolLog[]>([]);
+  const [schedules, setSchedules] = useState<RondaSchedule[]>([]);
+  const [cameras, setCameras] = useState<SecurityCamera[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+    
+    // Listen to Ronda Schedules
+    const schedulesQuery = query(collection(db, 'ronda_schedules'));
+    const unsubscribeSchedules = onSnapshot(schedulesQuery, (snapshot) => {
+      const schedulesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RondaSchedule));
+      setSchedules(schedulesData.length > 0 ? schedulesData : RONDA_SCHEDULES);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'ronda_schedules'));
+
+    // Listen to Security Cameras
+    const camerasQuery = query(collection(db, 'security_cameras'));
+    const unsubscribeCameras = onSnapshot(camerasQuery, (snapshot) => {
+      const camerasData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SecurityCamera));
+      setCameras(camerasData.length > 0 ? camerasData : SECURITY_CAMERAS);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'security_cameras'));
+
+    // Listen to Patrol Logs
+    const logsQuery = query(collection(db, 'patrol_logs'), orderBy('date', 'desc'));
+    const unsubscribeLogs = onSnapshot(logsQuery, (snapshot) => {
+      const logsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PatrolLog));
+      setLogs(logsData.length > 0 ? logsData : PATROL_LOGS);
+      setLoading(false);
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'patrol_logs'));
+
+    return () => {
+      unsubscribeSchedules();
+      unsubscribeCameras();
+      unsubscribeLogs();
+    };
+  }, []);
+
   // Schedule Management State
-  const [schedules, setSchedules] = useState<RondaSchedule[]>(RONDA_SCHEDULES);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [newSchedule, setNewSchedule] = useState({
       date: '',
@@ -68,8 +105,22 @@ const PosKamlingView: React.FC<PosKamlingViewProps> = ({
     else if (panicMode && panicCountdown === 0 && broadcastStatus === 'IDLE') {
         setBroadcastStatus('SENDING');
         // Simulate network delay for broadcasting
-        setTimeout(() => {
-            setBroadcastStatus('SENT');
+        setTimeout(async () => {
+            try {
+              await addDoc(collection(db, 'security_alerts'), {
+                type: 'PANIC_BUTTON',
+                location: 'User Location',
+                time: new Date().toISOString(),
+                severity: 'HIGH',
+                status: 'ACTIVE',
+                userId: user.id,
+                userName: user.name
+              });
+              setBroadcastStatus('SENT');
+            } catch (error) {
+              console.error('Failed to trigger panic alert:', error);
+              setBroadcastStatus('IDLE');
+            }
         }, 3000);
     }
     
@@ -94,10 +145,9 @@ const PosKamlingView: React.FC<PosKamlingViewProps> = ({
       }
   };
 
-  const submitCheckIn = () => {
+  const submitCheckIn = async () => {
       // 3. Create Log Entry
-      const newLog: PatrolLog = {
-          id: `log_${Date.now()}`,
+      const logEntry: Omit<PatrolLog, 'id'> = {
           date: new Date().toISOString().split('T')[0],
           time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
           officer: user.name,
@@ -105,21 +155,25 @@ const PosKamlingView: React.FC<PosKamlingViewProps> = ({
           status: checkInData.status as 'AMAN' | 'ENCURIGAKAN' | 'INSIDEN',
           note: checkInData.note || 'Check-in rutin via aplikasi.'
       };
-      setLogs([newLog, ...logs]);
-      setIsCheckInModalOpen(false);
-      // Reset form
-      setCheckInData({
-          location: PATROL_LOCATIONS[0],
-          status: 'AMAN',
-          note: ''
-      });
+
+      try {
+        await addDoc(collection(db, 'patrol_logs'), logEntry);
+        setIsCheckInModalOpen(false);
+        // Reset form
+        setCheckInData({
+            location: PATROL_LOCATIONS[0],
+            status: 'AMAN',
+            note: ''
+        });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, 'patrol_logs');
+      }
   };
 
-  const handleAddSchedule = () => {
+  const handleAddSchedule = async () => {
       if (!newSchedule.date || !newSchedule.commander) return;
       
-      const newEntry: RondaSchedule = {
-          id: `sch_${Date.now()}`,
+      const scheduleEntry: Omit<RondaSchedule, 'id'> = {
           date: newSchedule.date,
           shift: newSchedule.shift,
           members: newSchedule.members.split(',').map(m => m.trim()).filter(m => m !== ''),
@@ -127,9 +181,13 @@ const PosKamlingView: React.FC<PosKamlingViewProps> = ({
           status: 'UPCOMING'
       };
 
-      setSchedules([...schedules, newEntry]);
-      setIsScheduleModalOpen(false);
-      setNewSchedule({ date: '', shift: '21:00 - 04:00', commander: '', members: '' });
+      try {
+        await addDoc(collection(db, 'ronda_schedules'), scheduleEntry);
+        setIsScheduleModalOpen(false);
+        setNewSchedule({ date: '', shift: '21:00 - 04:00', commander: '', members: '' });
+      } catch (error) {
+        handleFirestoreError(error, OperationType.CREATE, 'ronda_schedules');
+      }
   };
 
   const getStatusColor = (status: string) => {

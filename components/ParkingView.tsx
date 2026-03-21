@@ -1,8 +1,14 @@
 
-import React, { useState, useEffect } from 'react';
-import { Car, MapPin, CreditCard, QrCode, Ticket, CheckCircle, TrendingUp, Wallet, Wifi, User, Bike, Smartphone, Building, Printer, X, History, Activity, Zap, Radio, ScanLine, ArrowRight, ArrowUpCircle, ArrowDownCircle, Eye, EyeOff, Lock } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Car, MapPin, CreditCard, QrCode, Ticket, CheckCircle, TrendingUp, Wallet, Wifi, User, Bike, Smartphone, Building, Printer, X, History, Activity, Zap, Radio, ScanLine, ArrowRight, ArrowUpCircle, ArrowDownCircle, Eye, EyeOff, Lock, Scan, ShieldCheck, Landmark, RefreshCw, Layers, Globe } from 'lucide-react';
 import { PARKING_ZONES, MOCK_USER } from '../constants';
 import { ParkingZone, CitizenProfile } from '../types';
+import GeospatialMap from './GeospatialMap';
+import Barcode from 'react-barcode';
+import { QRCodeSVG } from 'qrcode.react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+import { db, auth, handleFirestoreError, OperationType } from '../firebase';
+import { collection, query, orderBy, limit, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, increment, where } from 'firebase/firestore';
 
 interface ParkingViewProps {
   user?: CitizenProfile;
@@ -18,6 +24,7 @@ interface ParkingLog {
 
 const ParkingView: React.FC<ParkingViewProps> = ({ user = MOCK_USER }) => {
   const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'MAP' | 'POS'>('MAP');
+  const [mapMode, setMapMode] = useState<'STYLIZED' | 'GEOSPATIAL'>('GEOSPATIAL');
   const [zones, setZones] = useState<ParkingZone[]>(PARKING_ZONES);
   const [selectedZone, setSelectedZone] = useState<ParkingZone | null>(null);
   const [isVisitorMode, setIsVisitorMode] = useState(false);
@@ -34,9 +41,11 @@ const ParkingView: React.FC<ParkingViewProps> = ({ user = MOCK_USER }) => {
   const [vehicleType, setVehicleType] = useState<'MOTOR' | 'MOBIL'>('MOTOR');
   const [plateNumber, setPlateNumber] = useState('');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<'QRIS' | 'EMONEY' | 'CASH' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'QRIS' | 'EMONEY' | 'CASH' | 'MANDIRI' | 'BANK_LAMPUNG' | null>(null);
   const [simulationState, setSimulationState] = useState<'IDLE' | 'WAITING_TAP' | 'SCANNING' | 'PROCESSING' | 'SUCCESS'>('IDLE');
   const [ticketPrinted, setTicketPrinted] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
   // Effect: Handle Mode Switch
   useEffect(() => {
@@ -45,13 +54,28 @@ const ParkingView: React.FC<ParkingViewProps> = ({ user = MOCK_USER }) => {
       }
   }, [isVisitorMode, activeTab]);
 
-  // Simulation: Live Data Updates
+  // Simulation: Live Data Updates (Now with Firestore sync for logs)
   useEffect(() => {
+    // 1. Sync Logs from Firestore
+    const q = query(collection(db, 'parking_sessions'), orderBy('startTime', 'desc'), limit(5));
+    const unsubscribeLogs = onSnapshot(q, (snapshot) => {
+      const logs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        plate: doc.data().plateNumber,
+        type: doc.data().status === 'ACTIVE' ? 'IN' : 'OUT',
+        time: doc.data().startTime?.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) || 'Now',
+        gate: doc.data().zoneName || 'Main Gate'
+      })) as ParkingLog[];
+      if (logs.length > 0) setRecentLogs(logs);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'parking_sessions');
+    });
+
     const interval = setInterval(() => {
-        // 1. Update Zone Data
+        // Update Zone Data (Simulation remains for occupancy UI, but could be Firestore)
         setZones(prev => prev.map(z => {
-            if (Math.random() > 0.7) {
-                const change = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+            if (Math.random() > 0.8) {
+                const change = Math.floor(Math.random() * 3) - 1;
                 const newOccupancy = Math.max(0, Math.min(z.capacity, z.occupied + change));
                 return {
                     ...z,
@@ -62,27 +86,12 @@ const ParkingView: React.FC<ParkingViewProps> = ({ user = MOCK_USER }) => {
             }
             return z;
         }));
+    }, 5000);
 
-        // 2. Simulate Random Gate Activity
-        if (Math.random() > 0.6) {
-            const types: ('IN' | 'OUT')[] = ['IN', 'OUT'];
-            const randomType = types[Math.floor(Math.random() * types.length)];
-            const randomPlate = `BE ${Math.floor(Math.random() * 9000 + 1000)} ${['AB', 'XY', 'YZ'][Math.floor(Math.random() * 3)]}`;
-            
-            const newLog: ParkingLog = {
-                id: Date.now().toString(),
-                plate: randomPlate,
-                type: randomType,
-                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                gate: randomType === 'IN' ? 'Gate 1 (Utara)' : 'Gate 2 (Selatan)'
-            };
-            setRecentLogs(prev => [newLog, ...prev.slice(0, 4)]);
-            setGateStatus('OPEN');
-            setTimeout(() => setGateStatus('CLOSED'), 2000);
-        }
-
-    }, 3000);
-    return () => clearInterval(interval);
+    return () => {
+      unsubscribeLogs();
+      clearInterval(interval);
+    };
   }, []);
 
   const totalRevenue = zones.reduce((acc, z) => acc + z.revenueToday, 0);
@@ -96,17 +105,17 @@ const ParkingView: React.FC<ParkingViewProps> = ({ user = MOCK_USER }) => {
       setActiveTab('POS');
   };
 
-  const handleProcessPayment = (method: 'QRIS' | 'EMONEY' | 'CASH') => {
+  const handleProcessPayment = (method: 'QRIS' | 'EMONEY' | 'CASH' | 'MANDIRI' | 'BANK_LAMPUNG') => {
       setPaymentMethod(method);
       
-      if (method === 'EMONEY') {
+      if (method === 'EMONEY' || method === 'BANK_LAMPUNG') {
           setSimulationState('WAITING_TAP');
           // Simulate Tap after 3 seconds
           setTimeout(() => {
               setSimulationState('PROCESSING');
               finalizePayment();
           }, 3000);
-      } else if (method === 'QRIS') {
+      } else if (method === 'QRIS' || method === 'MANDIRI') {
           setSimulationState('SCANNING');
           // Simulate Scan after 3 seconds
           setTimeout(() => {
@@ -119,17 +128,46 @@ const ParkingView: React.FC<ParkingViewProps> = ({ user = MOCK_USER }) => {
       }
   };
 
-  const finalizePayment = () => {
-      setTimeout(() => {
+  const finalizePayment = async () => {
+      const fee = calculateFee();
+      setTimeout(async () => {
           setSimulationState('SUCCESS');
           setTicketPrinted(true);
           
           if (selectedZone) {
-              setZones(prev => prev.map(z => 
-                  z.id === selectedZone.id 
-                  ? { ...z, occupied: Math.min(z.capacity, z.occupied + 1), revenueToday: z.revenueToday + (vehicleType === 'MOTOR' ? 2000 : 5000) } 
-                  : z
-              ));
+              try {
+                // 1. Log Session to Firestore
+                await addDoc(collection(db, 'parking_sessions'), {
+                  plateNumber,
+                  vehicleType,
+                  zoneId: selectedZone.id,
+                  zoneName: selectedZone.name,
+                  startTime: serverTimestamp(),
+                  fee,
+                  paymentMethod,
+                  status: 'ACTIVE',
+                  attendantUid: auth.currentUser?.uid || 'system'
+                });
+
+                // 2. Add Transaction
+                await addDoc(collection(db, 'transactions'), {
+                  userId: auth.currentUser?.uid || 'system',
+                  amount: fee,
+                  type: 'INCOME',
+                  category: 'Parking',
+                  description: `Parkir ${vehicleType} - ${plateNumber}`,
+                  timestamp: serverTimestamp(),
+                  recipient: selectedZone.name
+                });
+
+                setZones(prev => prev.map(z => 
+                    z.id === selectedZone.id 
+                    ? { ...z, occupied: Math.min(z.capacity, z.occupied + 1), revenueToday: z.revenueToday + fee } 
+                    : z
+                ));
+              } catch (error) {
+                handleFirestoreError(error, OperationType.WRITE, 'parking_sessions');
+              }
           }
       }, 1500);
   }
@@ -366,46 +404,75 @@ const ParkingView: React.FC<ParkingViewProps> = ({ user = MOCK_USER }) => {
                </div>
            )}
 
-           {/* MAP TAB */}
-           {activeTab === 'MAP' && (
-               <div className="relative h-full bg-slate-100">
-                   <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-50"></div>
-                   
-                   {/* Mock Map Layout */}
-                   <div className="absolute inset-4 bg-white/50 backdrop-blur rounded-2xl border border-white shadow-inner overflow-hidden">
-                       {/* Roads */}
-                       <div className="absolute top-[40%] left-0 w-full h-12 bg-slate-300 border-y-2 border-slate-400">
-                           <div className="w-full h-full border-b-2 border-dashed border-white/50 translate-y-[-2px]"></div>
-                       </div>
-                       <div className="absolute top-0 left-[60%] w-12 h-full bg-slate-300 border-x-2 border-slate-400">
-                            <div className="w-full h-full border-r-2 border-dashed border-white/50 translate-x-[-2px]"></div>
-                       </div>
+            {/* MAP TAB */}
+            {activeTab === 'MAP' && (
+                <div className="relative h-full bg-slate-100 flex flex-col">
+                    {/* Map Controls */}
+                    <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+                        <div className="bg-white/90 backdrop-blur p-1 rounded-xl shadow-lg border border-slate-200 flex flex-col">
+                            <button 
+                                onClick={() => setMapMode('GEOSPATIAL')}
+                                className={`p-2 rounded-lg transition ${mapMode === 'GEOSPATIAL' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}
+                                title="Geospatial Map"
+                            >
+                                <Globe size={20} />
+                            </button>
+                            <button 
+                                onClick={() => setMapMode('STYLIZED')}
+                                className={`p-2 rounded-lg transition ${mapMode === 'STYLIZED' ? 'bg-slate-800 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}
+                                title="Stylized Layout"
+                            >
+                                <Layers size={20} />
+                            </button>
+                        </div>
+                    </div>
 
-                       {zones.map((zone) => (
-                           <div 
-                                key={zone.id}
-                                onClick={() => handleZoneClick(zone)}
-                                className={`absolute transform -translate-x-1/2 -translate-y-1/2 ${!isVisitorMode ? 'cursor-pointer hover:scale-110' : 'cursor-default'} transition-all group`}
-                                style={{ top: `${zone.coordinates.y}%`, left: `${zone.coordinates.x}%` }}
-                           >
-                               <div className={`relative flex flex-col items-center`}>
-                                   <div className={`w-16 h-16 rounded-xl shadow-xl flex items-center justify-center border-4 border-white ${zone.status === 'FULL' ? 'bg-red-500' : 'bg-blue-600'} text-white`}>
-                                       <div className="text-center">
-                                           <span className="text-xs font-bold block">P</span>
-                                           <span className="text-[10px] font-mono">{zone.occupied}/{zone.capacity}</span>
-                                       </div>
-                                   </div>
-                                   {/* Tooltip */}
-                                   <div className="absolute bottom-full mb-2 bg-white px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-20">
-                                       <p className="font-bold text-xs text-slate-800">{zone.name}</p>
-                                       <p className="text-[10px] text-slate-500">{isVisitorMode ? (zone.status === 'FULL' ? 'Penuh' : 'Tersedia') : `Juru Parkir: ${zone.attendant}`}</p>
-                                   </div>
-                               </div>
-                           </div>
-                       ))}
-                   </div>
-               </div>
-           )}
+                    {mapMode === 'GEOSPATIAL' ? (
+                        <GeospatialMap 
+                            zones={zones} 
+                            onZoneClick={handleZoneClick} 
+                        />
+                    ) : (
+                        <div className="relative h-full overflow-hidden">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-50"></div>
+                            
+                            {/* Mock Map Layout */}
+                            <div className="absolute inset-4 bg-white/50 backdrop-blur rounded-2xl border border-white shadow-inner overflow-hidden">
+                                {/* Roads */}
+                                <div className="absolute top-[40%] left-0 w-full h-12 bg-slate-300 border-y-2 border-slate-400">
+                                    <div className="w-full h-full border-b-2 border-dashed border-white/50 translate-y-[-2px]"></div>
+                                </div>
+                                <div className="absolute top-0 left-[60%] w-12 h-full bg-slate-300 border-x-2 border-slate-400">
+                                    <div className="w-full h-full border-r-2 border-dashed border-white/50 translate-x-[-2px]"></div>
+                                </div>
+
+                                {zones.map((zone) => (
+                                    <div 
+                                            key={zone.id}
+                                            onClick={() => handleZoneClick(zone)}
+                                            className={`absolute transform -translate-x-1/2 -translate-y-1/2 ${!isVisitorMode ? 'cursor-pointer hover:scale-110' : 'cursor-default'} transition-all group`}
+                                            style={{ top: `${zone.coordinates.y}%`, left: `${zone.coordinates.x}%` }}
+                                    >
+                                        <div className={`relative flex flex-col items-center`}>
+                                            <div className={`w-16 h-16 rounded-xl shadow-xl flex items-center justify-center border-4 border-white ${zone.status === 'FULL' ? 'bg-red-500' : 'bg-blue-600'} text-white`}>
+                                                <div className="text-center">
+                                                    <span className="text-xs font-bold block">P</span>
+                                                    <span className="text-[10px] font-mono">{zone.occupied}/{zone.capacity}</span>
+                                                </div>
+                                            </div>
+                                            {/* Tooltip */}
+                                            <div className="absolute bottom-full mb-2 bg-white px-3 py-1.5 rounded-lg shadow-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition pointer-events-none z-20">
+                                                <p className="font-bold text-xs text-slate-800">{zone.name}</p>
+                                                <p className="text-[10px] text-slate-500">{isVisitorMode ? (zone.status === 'FULL' ? 'Penuh' : 'Tersedia') : `Juru Parkir: ${zone.attendant}`}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
 
            {/* POS (TERMINAL) TAB - Hidden in Visitor Mode */}
            {activeTab === 'POS' && selectedZone && !isVisitorMode && (
@@ -527,6 +594,27 @@ const ParkingView: React.FC<ParkingViewProps> = ({ user = MOCK_USER }) => {
                                                <span className="text-xs text-slate-500">Pembayaran Manual</span>
                                            </div>
                                        </button>
+
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button 
+                                                onClick={() => handleProcessPayment('MANDIRI')}
+                                                className="p-4 rounded-xl border border-slate-200 hover:border-blue-600 hover:bg-blue-50 transition flex flex-col items-center gap-2 group"
+                                            >
+                                                <div className="w-10 h-10 bg-blue-800 rounded-lg flex items-center justify-center text-white">
+                                                    <Landmark size={20} />
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-800">Mandiri</span>
+                                            </button>
+                                            <button 
+                                                onClick={() => handleProcessPayment('BANK_LAMPUNG')}
+                                                className="p-4 rounded-xl border border-slate-200 hover:border-red-600 hover:bg-red-50 transition flex flex-col items-center gap-2 group"
+                                            >
+                                                <div className="w-10 h-10 bg-red-600 rounded-lg flex items-center justify-center text-white">
+                                                    <Landmark size={20} />
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-800 text-center leading-tight">Bank Lampung</span>
+                                            </button>
+                                        </div>
                                    </div>
                                </div>
                            )}
@@ -589,34 +677,46 @@ const ParkingView: React.FC<ParkingViewProps> = ({ user = MOCK_USER }) => {
                                <p className="text-xs text-slate-500 uppercase">{selectedZone?.name}</p>
                            </div>
                            
-                           <div className="space-y-2 mb-6 text-sm">
-                               <div className="flex justify-between">
-                                   <span className="text-slate-500">Tanggal</span>
-                                   <span className="font-mono font-bold">{new Date().toLocaleDateString()}</span>
-                               </div>
-                               <div className="flex justify-between">
-                                   <span className="text-slate-500">Jam Masuk</span>
-                                   <span className="font-mono font-bold">{new Date().toLocaleTimeString()}</span>
-                               </div>
-                               <div className="flex justify-between">
-                                   <span className="text-slate-500">Nopol</span>
-                                   <span className="font-mono font-bold text-lg">{plateNumber}</span>
-                               </div>
-                               <div className="flex justify-between">
-                                   <span className="text-slate-500">Metode</span>
-                                   <span className="font-bold">{paymentMethod}</span>
-                               </div>
-                           </div>
+                            <div className="space-y-2 mb-6 text-sm">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">No. Tiket</span>
+                                    <span className="font-mono font-bold">PKR-{Math.floor(Math.random() * 1000000)}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">Metode</span>
+                                    <span className="font-bold">{paymentMethod}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">Waktu</span>
+                                    <span className="font-bold">{new Date().toLocaleTimeString()}</span>
+                                </div>
+                                <div className="flex justify-between pt-2 border-t border-slate-100">
+                                    <span className="font-bold">TOTAL</span>
+                                    <span className="font-bold text-blue-600">Rp {selectedZone?.price.toLocaleString()}</span>
+                                </div>
+                            </div>
 
-                           <div className="bg-slate-100 p-3 rounded-lg text-center mb-6">
-                               <p className="text-xs text-slate-500 uppercase">Total Bayar</p>
-                               <p className="text-2xl font-black text-slate-800">Rp {calculateFee().toLocaleString()}</p>
-                           </div>
-
-                           <div className="text-center">
-                               <QrCode size={64} className="mx-auto mb-2 opacity-50" />
-                               <p className="text-[10px] text-slate-400">Simpan struk ini sebagai bukti parkir yang sah.</p>
-                           </div>
+                            {/* BARCODE & QR */}
+                            <div className="space-y-4 flex flex-col items-center border-t-2 border-dashed border-slate-300 pt-6">
+                                <div className="bg-white p-2 border border-slate-100 rounded-lg">
+                                    <Barcode 
+                                        value={`PKR-${Math.floor(Math.random() * 1000000)}`} 
+                                        width={1.5} 
+                                        height={40} 
+                                        fontSize={10}
+                                        background="transparent"
+                                    />
+                                </div>
+                                <div className="bg-white p-2 border border-slate-100 rounded-lg">
+                                    <QRCodeSVG 
+                                        value={`https://metalos.id/verify/pkr-${Math.floor(Math.random() * 1000000)}`}
+                                        size={80}
+                                    />
+                                </div>
+                                <p className="text-[10px] text-slate-400 text-center uppercase tracking-widest">
+                                    Scan to Verify • MetalOS Ecosystem
+                                </p>
+                            </div>
 
                            <button 
                                 onClick={resetPos}

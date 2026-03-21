@@ -7,125 +7,25 @@ service cloud.firestore {
     // ===============================================================
     //
     // Collection: users
-    // Document ID: {uid}
-    // Fields:
-    //   - uid: string (required, immutable)
-    //   - displayName: string (required, size < 100)
-    //   - photoURL: string (optional, URL format)
-    //   - email: string (required, email format, private)
-    //   - role: string (required)
-    //   - balance: number (optional)
-    //   - points: number (optional)
-    //   - wargaScore: number (optional)
-    //   - lastSeen: timestamp (required)
+    // Fields: uid, displayName, email, photoURL, role, lastSeen, phoneNumber, address, bio, nik, id, name, balance, points, wargaScore, mandiriVA, photoUrl, phone, occupation, birthDate, achievements, lastLogin, userType
+    //
+    // Collection: transactions
+    // Fields: id, type, amount, description, date, recipient, category, userId
+    //
+    // Collection: reports
+    // Fields: id, type, title, description, author, authorId, date, location, status, votes, comments, coordinates, photoUrl
+    //
+    // Collection: parking_sessions
+    // Fields: id, plate, type, entryTime, zoneId, status, cost, paymentMethod
     //
     // Collection: tasks
-    // Document ID: {taskId}
-    // Fields:
-    //   - title: string (required, size < 200)
-    //   - description: string (required, size < 2000)
-    //   - assignedTo: list (required, size < 10)
-    //   - priority: string (required, enum: ['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
-    //   - status: string (required, enum: ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'])
-    //   - dueDate: string (optional)
-    //   - location: map (optional, {lat: number, lng: number, address: string})
-    //   - category: string (required)
-    //
-    // Collection: assets
-    // Document ID: {assetId}
-    // Fields:
-    //   - name: string (required, size < 200)
-    //   - type: string (required, enum: ['VEHICLE', 'EQUIPMENT', 'BUILDING'])
-    //   - status: string (required, enum: ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'RETIRED'])
-    //   - condition: string (required, enum: ['EXCELLENT', 'GOOD', 'FAIR', 'POOR'])
-    //   - location: map (optional, {lat: number, lng: number, address: string})
-    //   - lastMaintained: string (optional)
-    //   - assignedTo: string (optional)
-    //   - imageColor: string (optional)
-    //
-    // Collection: budget
-    // Document ID: {budgetId}
-    // Fields:
-    //   - category: string (required)
-    //   - allocated: number (required)
-    //   - realized: number (required)
-    //   - status: string (required)
-    //
-    // Collection: stunting
-    // Document ID: {stuntingId}
-    // Fields:
-    //   - name: string (required)
-    //   - rate: number (required)
-    //
-    // Collection: activities
-    // Document ID: {activityId}
-    // Fields:
-    //   - time: string (required)
-    //   - event: string (required)
-    //   - detail: string (required)
-    //   - icon: string (optional)
-    //   - color: string (optional)
-    //   - createdAt: timestamp (required)
-    //
-    // Collection: stats
-    // Document ID: village_stats
-    // Fields:
-    //   - totalPenduduk: number
-    //   - indeksDesa: number
-    //   - logistik: number
-    //   - peringatan: number
-    //
-    // Collection: market_stalls
-    // Document ID: {stallId}
-    // Fields:
-    //   - name: string (required)
-    //   - owner: string (required)
-    //   - category: string (required, enum: ['KULINER', 'KERAJINAN', 'JASA', 'FASHION'])
-    //   - revenueToday: number (required)
-    //   - status: string (required, enum: ['OPEN', 'CLOSED'])
-    //
-    // Collection: market_layout
-    // Document ID: {itemId}
-    // Fields:
-    //   - type: string (required)
-    //   - label: string (required)
-    //   - x: number (required)
-    //   - y: number (required)
-    //   - width: number (optional)
-    //   - height: number (optional)
-    //   - rotation: number (optional)
-    //   - status: string (optional)
-    //   - linkedStallId: string (optional)
-    //   - capacity: number (optional)
-    //
-    // Collection: market_transactions
-    // Document ID: {transactionId}
-    // Fields:
-    //   - type: string (required, enum: ['MARKET_SALE', 'TOPUP'])
-    //   - amount: number (required)
-    //   - description: string (optional)
-    //   - date: timestamp (required)
-    //   - userId: string (required)
-    //   - stallId: string (optional)
-    //   - paymentMethod: string (required, enum: ['QRIS', 'WARGAPAY', 'POINTS', 'CASH'])
-    //
-    // Collection: market_reservations
-    // Document ID: {reservationId}
-    // Fields:
-    //   - tableId: string (required)
-    //   - userId: string (required)
-    //   - userName: string (required)
-    //   - startTime: timestamp (required)
-    //   - endTime: timestamp (optional)
-    //   - guests: number (required)
-    //   - status: string (required, enum: ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'])
+    // Fields: id, title, description, assignedTo, priority, status, dueDate, category
     //
     // ===============================================================
 
     // ===============================================================
     // Helper Functions
     // ===============================================================
-
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -134,226 +34,357 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
+    function isDocOwner() {
+      return isAuthenticated() && (
+        (resource.data.userId == request.auth.uid) || 
+        (resource.data.authorId == request.auth.uid) || 
+        (resource.data.owner == request.auth.uid) ||
+        (resource.data.senderId == request.auth.uid)
+      );
+    }
+
+    function getUserRole() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return userDoc.exists ? userDoc.data().role : null;
+    }
+
     function isAdmin() {
-      return isAuthenticated() &&
-        (
-          (request.auth.token.email == "usahayakupmakmur@gmail.com" && request.auth.token.email_verified == true) ||
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-            get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Lurah / Admin'))
-        );
+      return isAuthenticated() && 
+        ((getUserRole() == 'Lurah / Admin') ||
+         (request.auth.token.email == "usahayakupmakmur@gmail.com" && request.auth.token.email_verified == true));
     }
 
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    function isWargaBergerak() {
+      return isAuthenticated() && (getUserRole() == 'Warga Bergerak' || isAdmin());
     }
 
-    function isValidUrl(url) {
-      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    function isWargaBerdaya() {
+      return isAuthenticated() && (getUserRole() == 'Warga Berdaya' || isWargaBergerak());
     }
 
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
+    function isWargaBerkarya() {
+      return isAuthenticated() && (getUserRole() == 'Warga Berkarya' || isWargaBerdaya());
     }
 
     function hasRequiredFields(fields) {
       return request.resource.data.keys().hasAll(fields);
     }
 
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
     // ===============================================================
     // Domain Validators
     // ===============================================================
 
-    function isValidUser(data) {
-      return hasRequiredFields(['uid', 'displayName', 'email', 'role', 'lastSeen']) &&
-             hasOnlyAllowedFields(['uid', 'displayName', 'photoURL', 'email', 'role', 'lastSeen', 'balance', 'points', 'wargaScore']) &&
-             data.uid == request.auth.uid &&
-             data.displayName is string && data.displayName.size() < 100 &&
-             isValidEmail(data.email) &&
-             data.lastSeen is timestamp;
-    }
-
-    function isValidTeamTask(data) {
-      return hasRequiredFields(['title', 'assignedTo', 'priority', 'status', 'category']) &&
-             data.title is string && data.title.size() < 200 &&
-             data.assignedTo is list && data.assignedTo.size() < 10 &&
-             data.priority in ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] &&
-             data.status in ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'] &&
-             data.category is string;
-    }
-
-    function isValidAsset(data) {
-      return hasRequiredFields(['name', 'type', 'status', 'condition']) &&
-             data.name is string && data.name.size() < 200 &&
-             data.type in ['VEHICLE', 'EQUIPMENT', 'BUILDING'] &&
-             data.status in ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'RETIRED'] &&
-             data.condition in ['EXCELLENT', 'GOOD', 'FAIR', 'POOR'];
-    }
-
-    function isValidBudget(data) {
-      return hasRequiredFields(['category', 'allocated', 'realized', 'status']) &&
-             data.category is string &&
-             data.allocated is number &&
-             data.realized is number &&
-             data.status is string;
-    }
-
-    function isValidStunting(data) {
-      return hasRequiredFields(['name', 'rate']) &&
-             data.name is string &&
-             data.rate is number;
-    }
-
-    function isValidActivity(data) {
-      return hasRequiredFields(['time', 'event', 'detail', 'createdAt']) &&
-             data.time is string &&
-             data.event is string &&
-             data.detail is string &&
-             data.createdAt is timestamp;
+    function isValidTransaction(data) {
+      return hasRequiredFields(['type', 'amount', 'category', 'userId', 'date']) &&
+             data.type in ['INCOME', 'EXPENSE', 'PAYMENT', 'SPLITTER_AUTO', 'TRASH_DEPOSIT', 'PARKING_FEE', 'WIFI_VOUCHER', 'MARKET_SALE', 'TOPUP'] &&
+             data.amount is number && data.amount > 0 &&
+             data.userId is string && data.userId.size() > 0;
     }
 
     function isValidReport(data) {
-      return hasRequiredFields(['type', 'title', 'description', 'location', 'coordinates', 'status', 'authorId', 'authorName', 'createdAt', 'votes', 'voters']) &&
-             hasOnlyAllowedFields(['type', 'title', 'description', 'location', 'coordinates', 'status', 'authorId', 'authorName', 'createdAt', 'votes', 'voters']) &&
+      return hasRequiredFields(['type', 'title', 'authorId', 'createdAt']) &&
              data.type in ['INFRASTRUCTURE', 'HEALTH', 'TRASH', 'SECURITY'] &&
-             data.title is string && data.title.size() < 200 &&
-             data.description is string && data.description.size() < 2000 &&
-             data.location is string && data.location.size() < 200 &&
-             data.coordinates is map && data.coordinates.lat is number && data.coordinates.lng is number &&
              data.status in ['PENDING', 'IN_PROGRESS', 'RESOLVED'] &&
-             data.authorId == request.auth.uid &&
-             data.authorName is string && data.authorName.size() < 100 &&
-             data.createdAt is timestamp &&
-             data.votes is number &&
-             data.voters is list && data.voters.size() < 1000;
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.authorId is string && data.authorId.size() > 0;
     }
 
     function isValidPost(data) {
-      return hasRequiredFields(['authorId', 'authorName', 'content', 'likes', 'comments', 'shares', 'createdAt', 'likedBy']) &&
-             hasOnlyAllowedFields(['authorId', 'authorName', 'authorAvatar', 'content', 'image', 'likes', 'comments', 'shares', 'createdAt', 'likedBy']) &&
-             data.authorId == request.auth.uid &&
-             data.authorName is string && data.authorName.size() < 100 &&
-             data.content is string && data.content.size() < 5000 &&
-             data.likes is number &&
-             data.comments is number &&
-             data.shares is number &&
-             data.createdAt is timestamp &&
-             data.likedBy is list && data.likedBy.size() < 1000;
+      return hasRequiredFields(['authorId', 'content', 'createdAt']) &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 5000 &&
+             data.authorId is string && data.authorId.size() > 0;
     }
 
     function isValidMessage(data) {
-      return hasRequiredFields(['senderId', 'receiverId', 'text', 'createdAt', 'read', 'isLocation']) &&
-             hasOnlyAllowedFields(['senderId', 'receiverId', 'text', 'createdAt', 'read', 'isLocation']) &&
-             data.senderId == request.auth.uid &&
-             data.receiverId is string &&
-             data.text is string && data.text.size() < 2000 &&
-             data.createdAt is timestamp &&
-             data.read is bool &&
-             data.isLocation is bool;
+      return hasRequiredFields(['senderId', 'receiverId', 'text', 'createdAt']) &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 2000 &&
+             data.senderId is string && data.senderId.size() > 0 &&
+             data.receiverId is string && data.receiverId.size() > 0;
+    }
+
+    function isValidParkingSession(data) {
+      return hasRequiredFields(['plateNumber', 'vehicleType', 'startTime', 'status']) &&
+             data.status in ['ACTIVE', 'COMPLETED'] &&
+             data.plateNumber is string && data.plateNumber.size() > 0;
+    }
+
+    function isValidTask(data) {
+      return hasRequiredFields(['title', 'priority', 'status']) &&
+             data.priority in ['LOW', 'MEDIUM', 'HIGH', 'URGENT'] &&
+             data.status in ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'] &&
+             data.title is string && data.title.size() > 0;
+    }
+
+    function isValidAsset(data) {
+      return hasRequiredFields(['name', 'category', 'status']) &&
+             data.status in ['AVAILABLE', 'IN_USE', 'MAINTENANCE'] &&
+             data.name is string && data.name.size() > 0;
     }
 
     function isValidMarketStall(data) {
-      return hasRequiredFields(['name', 'owner', 'category', 'revenueToday', 'status']) &&
-             data.name is string &&
-             data.owner is string &&
-             data.category in ['KULINER', 'KERAJINAN', 'JASA', 'FASHION'] &&
-             data.revenueToday is number &&
-             data.status in ['OPEN', 'CLOSED'];
+      return hasRequiredFields(['name', 'owner', 'category', 'status']) &&
+             data.category in ['KULINER', 'KERAJINAN', 'JASA', 'LAINNYA'] &&
+             data.status in ['OPEN', 'CLOSED'] &&
+             data.name is string && data.name.size() > 0 &&
+             data.owner is string && data.owner.size() > 0;
     }
 
-    function isValidMarketLayoutItem(data) {
-      return hasRequiredFields(['type', 'label', 'x', 'y']) &&
-             data.type is string &&
-             data.label is string &&
-             data.x is number &&
-             data.y is number;
+    function isValidMarketLayout(data) {
+      return hasRequiredFields(['type', 'x', 'y']) &&
+             data.type is string && data.type.size() > 0;
     }
 
     function isValidMarketTransaction(data) {
-      return hasRequiredFields(['type', 'amount', 'date', 'userId', 'paymentMethod']) &&
+      return hasRequiredFields(['type', 'amount', 'date', 'userId']) &&
              data.type in ['MARKET_SALE', 'TOPUP'] &&
-             data.amount is number &&
-             data.date is timestamp &&
-             data.userId is string &&
-             data.paymentMethod in ['QRIS', 'WARGAPAY', 'POINTS', 'CASH'];
+             data.amount is number && data.amount > 0 &&
+             data.userId is string && data.userId.size() > 0;
     }
 
     function isValidMarketReservation(data) {
-      return hasRequiredFields(['tableId', 'userId', 'userName', 'startTime', 'guests', 'status']) &&
-             data.tableId is string &&
-             data.userId is string &&
-             data.userName is string &&
-             data.startTime is timestamp &&
-             data.guests is number &&
-             data.status in ['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED'];
+      return hasRequiredFields(['tableId', 'userId', 'startTime']) &&
+             data.tableId is string && data.tableId.size() > 0 &&
+             data.userId is string && data.userId.size() > 0;
+    }
+
+    function isValidParkingZone(data) {
+      return hasRequiredFields(['name', 'capacity', 'occupied', 'status']) &&
+             data.status in ['OPEN', 'FULL', 'CLOSED'] &&
+             data.name is string && data.name.size() > 0;
+    }
+
+    function isValidSensor(data) {
+      return hasRequiredFields(['type', 'value', 'status']) &&
+             data.type in ['FLOOD', 'AIR_QUALITY', 'WASTE_LEVEL'] &&
+             data.status in ['SAFE', 'WARNING', 'DANGER'];
+    }
+
+    function isValidMarketplaceItem(data) {
+      return hasRequiredFields(['name', 'price', 'sellerId']) &&
+             data.price is number && data.price >= 0 &&
+             data.sellerId is string && data.sellerId.size() > 0;
+    }
+
+    function isValidServiceProvider(data) {
+      return hasRequiredFields(['name', 'price', 'providerId']) &&
+             data.price is number && data.price >= 0 &&
+             data.providerId is string && data.providerId.size() > 0;
+    }
+
+    function isValidBerdayaOrder(data) {
+      return hasRequiredFields(['type', 'itemId', 'total', 'status', 'buyerId', 'sellerId']) &&
+             data.type in ['PRODUCT', 'SERVICE'] &&
+             data.status in ['PAID', 'SHIPPING', 'COMPLETED', 'CANCELLED'] &&
+             data.total is number && data.total >= 0 &&
+             data.buyerId is string && data.buyerId.size() > 0 &&
+             data.sellerId is string && data.sellerId.size() > 0;
+    }
+
+    function isValidRondaSchedule(data) {
+      return hasRequiredFields(['date', 'shift', 'commander', 'status']) &&
+             data.status in ['UPCOMING', 'ACTIVE', 'COMPLETED'] &&
+             data.date is string && data.date.size() > 0 &&
+             data.shift is string && data.shift.size() > 0 &&
+             data.commander is string && data.commander.size() > 0;
+    }
+
+    function isValidPatrolLog(data) {
+      return hasRequiredFields(['date', 'time', 'officerId', 'location', 'status']) &&
+             data.status in ['AMAN', 'ENCURIGAKAN', 'INSIDEN'] &&
+             data.officerId is string && data.officerId.size() > 0 &&
+             data.location is string && data.location.size() > 0;
+    }
+
+    function isValidSecurityCamera(data) {
+      return hasRequiredFields(['name', 'location', 'status']) &&
+             data.status in ['ONLINE', 'OFFLINE', 'RECORDING'] &&
+             data.name is string && data.name.size() > 0 &&
+             data.location is string && data.location.size() > 0;
+    }
+
+    function isValidIotDevice(data) {
+      return hasRequiredFields(['id', 'name', 'type', 'status']) &&
+             data.type in ['light', 'sensor', 'camera', 'pump'] &&
+             data.name is string && data.name.size() > 0;
+    }
+
+    function isValidMusrenbangUsulan(data) {
+      return hasRequiredFields(['id', 'title', 'votes', 'category']) &&
+             data.title is string && data.title.size() > 0 &&
+             data.votes is number && data.votes >= 0;
+    }
+
+    function isValidCourierStatus(data) {
+      return hasRequiredFields(['uid', 'name', 'status']) &&
+             data.status in ['ONLINE', 'OFFLINE', 'BUSY'] &&
+             data.uid is string && data.uid.size() > 0 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100;
+    }
+
+    function isValidVisitorLog(data) {
+      return hasRequiredFields(['name', 'type', 'time', 'method', 'status']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.type in ['RESIDENT', 'GUEST', 'DELIVERY', 'UNKNOWN'] &&
+             data.method in ['WIFI', 'CAMERA', 'MANUAL'] &&
+             data.status in ['AUTHORIZED', 'PENDING', 'FLAGGED'] &&
+             (!('vehiclePlate' in data) || (data.vehiclePlate is string && data.vehiclePlate.size() < 20));
+    }
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'displayName', 'email', 'photoURL', 'role', 'lastSeen', 'phoneNumber', 'address', 'bio', 'nik', 'id', 'name', 'balance', 'points', 'wargaScore', 'mandiriVA', 'photoUrl', 'phone', 'occupation', 'birthDate', 'achievements', 'lastLogin', 'userType', 'avatarSeed', 'nib', 'nip', 'nim', 'nis', 'kip', 'kis', 'kelurahan', 'ossId', 'isOssLinked', 'ssoProvider', 'gender', 'status']) &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+             (!('name' in data) || (data.name is string && data.name.size() < 100)) &&
+             (!('bio' in data) || (data.bio is string && data.bio.size() < 1000)) &&
+             (!('address' in data) || (data.address is string && data.address.size() < 500)) &&
+             (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() < 20)) &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() < 20)) &&
+             (!('nik' in data) || (data.nik is string && data.nik.size() == 16)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() < 500)) &&
+             (!('photoUrl' in data) || (data.photoUrl is string && data.photoUrl.size() < 500)) &&
+             (!('balance' in data) || (data.balance is number)) &&
+             (!('points' in data) || (data.points is number)) &&
+             (!('wargaScore' in data) || (data.wargaScore is number)) &&
+             (!('userType' in data) || (data.userType in ['citizen', 'business_entity', 'government'])) &&
+             (!('gender' in data) || (data.gender in ['Laki-laki', 'Perempuan'])) &&
+             (!('status' in data) || (data.status in ['Online', 'Offline', 'Busy']));
     }
 
     // ===============================================================
-    // Collection Rules
+    // Match Rules
     // ===============================================================
 
-    match /test/connection {
-      allow read: if true;
+    match /visitor_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidVisitorLog(request.resource.data);
+      allow update, delete: if isAdmin();
     }
 
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isAuthenticated() && isValidUser(request.resource.data);
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && (isOwner(userId) || isAdmin());
-      allow delete: if isAdmin();
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && 
+        (isOwner(userId) || isAdmin()) &&
+        isValidUser(request.resource.data) &&
+        (request.resource.data.role == 'Warga Berdaya' || request.resource.data.role == 'Warga Bergerak' || request.resource.data.role == 'Warga Berkarya' || request.resource.data.role == 'Lurah / Admin' || isAdmin()) &&
+        (isOwner(userId) ? (request.resource.data.role == resource.data.role || !('role' in resource.data)) : true);
+    }
+
+    match /transactions/{transactionId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isWargaBerkarya() && isValidTransaction(request.resource.data) && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
     }
 
     match /reports/{reportId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidReport(request.resource.data);
-      allow update: if isAuthenticated() && (
-        (isValidReport(request.resource.data) && (isOwner(resource.data.authorId) || isAdmin())) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes', 'voters']) && 
-         math.abs(request.resource.data.votes - resource.data.votes) == 1)
-      );
-      allow delete: if isAuthenticated() && (isOwner(resource.data.authorId) || isAdmin());
+      allow create: if isAuthenticated() && isValidReport(request.resource.data) && (request.resource.data.authorId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidReport(request.resource.data) && (isDocOwner() || isAdmin());
+      allow delete: if isAdmin();
     }
 
     match /posts/{postId} {
       allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && isValidPost(request.resource.data);
-      allow update: if isAuthenticated() && (
-        (isValidPost(request.resource.data) && (isOwner(resource.data.authorId) || isAdmin())) ||
-        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likes', 'likedBy']) && 
-         math.abs(request.resource.data.likes - resource.data.likes) == 1)
-      );
-      allow delete: if isAuthenticated() && (isOwner(resource.data.authorId) || isAdmin());
+      allow create: if isAuthenticated() && isValidPost(request.resource.data) && (request.resource.data.authorId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidPost(request.resource.data) && (isDocOwner() || isAdmin());
+      allow delete: if isAdmin();
     }
 
     match /messages/{messageId} {
-      allow read: if isAuthenticated() && (isOwner(resource.data.senderId) || isOwner(resource.data.receiverId));
-      allow create: if isAuthenticated() && isValidMessage(request.resource.data);
-      allow update: if isAuthenticated() && isOwner(resource.data.receiverId) && 
-                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-      allow delete: if isAuthenticated() && isOwner(resource.data.senderId);
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.senderId || request.auth.uid == resource.data.receiverId || isAdmin());
+      allow create: if isAuthenticated() && isValidMessage(request.resource.data) && (request.resource.data.senderId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidMessage(request.resource.data) && (isDocOwner() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /parking_sessions/{sessionId} {
+      allow read: if isWargaBergerak();
+      allow create, update: if isWargaBergerak() && isValidParkingSession(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /tasks/{taskId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow read: if isWargaBergerak();
+      allow create, update: if isWargaBergerak() && isValidTask(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     match /assets/{assetId} {
       allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidAsset(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /market_stalls/{stallId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidMarketStall(request.resource.data) && (request.resource.data.owner == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidMarketStall(request.resource.data) && (isDocOwner() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /market_layout/{itemId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /market_transactions/{transactionId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidMarketTransaction(request.resource.data) && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update, delete: if isAdmin();
+    }
+
+    match /market_reservations/{reservationId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidMarketReservation(request.resource.data) && (request.resource.data.userId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidMarketReservation(request.resource.data) && (isDocOwner() || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /budget_data/{itemId} {
+      allow read: if isWargaBerdaya();
       allow write: if isAdmin();
     }
 
-    match /budget/{budgetId} {
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.sellerId || isAdmin());
+      allow create: if isAuthenticated() && (request.resource.data.buyerId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.sellerId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /security_alerts/{alertId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    match /library_content/{contentId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
 
-    match /stunting/{stuntingId} {
+    match /events/{eventId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
 
-    match /activities/{activityId} {
+    match /courses/{courseId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /stunting/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /activities/{id} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
@@ -363,33 +394,104 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /market_stalls/{stallId} {
+    match /parking/{zoneId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
-    match /market_layout/{itemId} {
+    match /sensors/{sensorId} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
-      allow update: if isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']) && 
-                    request.resource.data.status in ['AVAILABLE', 'OCCUPIED', 'ORDERING', 'DIRTY'];
+      allow create, update, delete: if isAdmin();
     }
 
-    match /market_transactions/{transactionId} {
-      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
-      allow create: if isAuthenticated() && isValidMarketTransaction(request.resource.data) && (request.resource.data.userId == request.auth.uid || isAdmin());
+    match /marketplace_items/{itemId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidMarketplaceItem(request.resource.data) && (request.resource.data.sellerId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidMarketplaceItem(request.resource.data) && (resource.data.sellerId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.sellerId == request.auth.uid || isAdmin());
+    }
+
+    match /service_providers/{providerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidServiceProvider(request.resource.data) && (request.resource.data.providerId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidServiceProvider(request.resource.data) && (resource.data.providerId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.providerId == request.auth.uid || isAdmin());
+    }
+
+    match /berdaya_orders/{orderId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.sellerId || isAdmin());
+      allow create: if isAuthenticated() && isValidBerdayaOrder(request.resource.data) && (request.resource.data.buyerId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && isValidBerdayaOrder(request.resource.data) && (request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.sellerId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /ronda_schedules/{scheduleId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /patrol_logs/{logId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidPatrolLog(request.resource.data) && (request.resource.data.officerId == request.auth.uid || isAdmin());
       allow update, delete: if isAdmin();
     }
 
-    match /market_reservations/{reservationId} {
-      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
-      allow create: if isAuthenticated() && isValidMarketReservation(request.resource.data) && (request.resource.data.userId == request.auth.uid || isAdmin());
-      allow update: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin()) && isValidMarketReservation(request.resource.data);
-      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    match /security_cameras/{cameraId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /iot_devices/{deviceId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /musrenbang/{usulanId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidMusrenbangUsulan(request.resource.data);
+      allow update: if isAuthenticated() && 
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['votes']) &&
+                    request.resource.data.votes == resource.data.votes + 1;
+      allow delete: if isAdmin();
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /posyandu_schedules/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /child_growth/{id} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.childId || isAdmin());
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
+    }
+
+    match /operational_logs/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /creative_finance/{id} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin();
+      allow update: if isAuthenticated() && (isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['currentAmount', 'backers']));
+    }
+
+    match /courier_status {
+      allow read: if isAuthenticated();
+      match /{userId} {
+        allow read: if isAuthenticated();
+        allow create, update: if isAuthenticated() && (isOwner(userId) || isAdmin()) && isValidCourierStatus(request.resource.data);
+        allow delete: if isAdmin();
+      }
     }
 
     // Default deny
-    match /{document=**} {
+    match /{path=**} {
       allow read, write: if false;
     }
   }

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, Component, ErrorInfo, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Phone, MessageSquare, MapPin, ThumbsUp, MessageCircle, Plus, CheckCircle, Clock, AlertTriangle, Filter, User, Share2, Video, PhoneCall, Facebook, Instagram, Youtube, Send, Globe, X, Camera, Image as ImageIcon, MoreHorizontal, Heart, RefreshCw, PlayCircle, Mic, Paperclip, Smile, ArrowLeft, MoreVertical, Play, Map, List, ExternalLink, Navigation, Users, Map as MapIcon, Hand, PenTool, Hexagon, Eraser, Undo, MousePointer2, Radio, LayoutGrid, Cone, Stethoscope, Trash2, ShieldAlert, QrCode, Bell, LogIn } from 'lucide-react';
+import { Search, Phone, MessageSquare, MapPin, ThumbsUp, MessageCircle, Plus, CheckCircle, Clock, AlertTriangle, Filter, User, Share2, Video, PhoneCall, Facebook, Instagram, Youtube, Send, Globe, X, Camera, Image as ImageIcon, MoreHorizontal, Heart, RefreshCw, PlayCircle, Mic, Paperclip, Smile, ArrowLeft, MoreVertical, Play, Map, List, ExternalLink, Navigation, Users, Map as MapIcon, Hand, PenTool, Hexagon, Eraser, Undo, MousePointer2, Radio, LayoutGrid, Cone, Stethoscope, Trash2, ShieldAlert, QrCode, Bell, LogIn, HardDrive, Calendar } from 'lucide-react';
 import { WARGA_CONTACTS, AVAILABLE_USERS } from '../constants';
 import { WargaContact, SocialReport, SocialPost, Comment, CitizenProfile } from '../types';
 import GeospatialEngine from './GeospatialEngine';
@@ -140,25 +140,26 @@ const INITIAL_POSTS: SocialPost[] = [
 ];
 
 interface SocialViewProps {
+  user?: CitizenProfile;
   onOpenAiAssistant?: () => void;
   onOpenScanner?: () => void;
   pendingUserId?: string | null;
   addNotification?: (title: string, type: string) => void;
 }
 
-const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanner, pendingUserId, addNotification }) => {
+const SocialView: React.FC<SocialViewProps> = ({ user, onOpenAiAssistant, onOpenScanner, pendingUserId, addNotification }) => {
   const [activeTab, setActiveTab] = useState<'CONTACTS' | 'REPORTS' | 'SOCIAL_MEDIA' | 'CHAT'>('REPORTS');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   
   // --- AUTH STATE ---
-  const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [fbUser, setFbUser] = useState<FirebaseUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+      setFbUser(u);
       setIsAuthReady(true);
     });
     return () => unsubscribe();
@@ -279,6 +280,9 @@ const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanne
   const [activeVideoId, setActiveVideoId] = useState<string | null>(null);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [newPostContent, setNewPostContent] = useState('');
+  const [isSavingToDrive, setIsSavingToDrive] = useState<string | null>(null);
+  const [isSyncingContact, setIsSyncingContact] = useState<string | null>(null);
+  const [isSavingToCalendar, setIsSavingToCalendar] = useState<string | null>(null);
 
   // Sync Posts from Firestore
   useEffect(() => {
@@ -406,8 +410,8 @@ const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanne
             description: newReport.description,
             type: newReport.type,
             location: newReport.location || 'Lokasi Saya',
-            authorId: user.uid,
-            authorName: user.displayName || 'Anonim',
+            authorId: user.id,
+            authorName: user.name || 'Anonim',
             status: 'PENDING',
             votes: 0,
             voters: [],
@@ -430,9 +434,9 @@ const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanne
 
       try {
         const postData = {
-            authorId: user.uid,
-            authorName: user.displayName || 'Anonim',
-            authorAvatar: user.photoURL || '',
+            authorId: user.id,
+            authorName: user.name || 'Anonim',
+            authorAvatar: user.photoUrl || '',
             content: newPostContent,
             likes: 0,
             comments: 0,
@@ -460,7 +464,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanne
         const reportRef = doc(db, 'reports', id);
         await updateDoc(reportRef, {
             votes: (report.votes || 0) + 1,
-            voters: [...(report.voters || []), user.uid]
+            voters: [...(report.voters || []), user.id]
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.UPDATE, `reports/${id}`);
@@ -490,7 +494,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanne
       
       try {
         const msgData = {
-            senderId: user.uid,
+            senderId: user.id,
             receiverId: activeChatId, // Simplified for demo
             text: isLocationShare ? '📍 Membagikan Lokasi Terkini' : chatInput,
             createdAt: Timestamp.now(),
@@ -519,15 +523,101 @@ const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanne
 
       try {
         const postRef = doc(db, 'posts', id);
-        const isLiked = post.likedBy?.includes(user.uid);
+        const isLiked = post.likedBy?.includes(user.id);
         await updateDoc(postRef, {
             likes: (post.likes || 0) + (isLiked ? -1 : 1),
             likedBy: isLiked 
-                ? post.likedBy?.filter(uid => uid !== user.uid) 
-                : [...(post.likedBy || []), user.uid]
+                ? post.likedBy?.filter(uid => uid !== user.id) 
+                : [...(post.likedBy || []), user.id]
         });
       } catch (error) {
         handleFirestoreError(error, OperationType.UPDATE, `posts/${id}`);
+      }
+  };
+
+  const saveReportToDrive = async (report: SocialReport) => {
+      setIsSavingToDrive(report.id);
+      try {
+          const response = await fetch('/api/google/drive/save-report', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ report })
+          });
+          
+          if (response.status === 401) {
+              // Not authenticated with Google
+              const authResponse = await fetch('/api/auth/google/url');
+              const { url } = await authResponse.json();
+              window.open(url, 'google_auth', 'width=600,height=600');
+              return;
+          }
+
+          if (!response.ok) throw new Error('Gagal menyimpan ke Drive');
+          
+          const data = await response.json();
+          alert(`Laporan berhasil disimpan ke Google Drive!`);
+          window.open(data.webViewLink, '_blank');
+      } catch (error) {
+          console.error('Drive error:', error);
+          alert('Terjadi kesalahan saat menyimpan ke Drive.');
+      } finally {
+          setIsSavingToDrive(null);
+      }
+  };
+
+  const saveContactToGoogle = async (contact: WargaContact) => {
+      setIsSyncingContact(contact.id);
+      try {
+          const response = await fetch('/api/google/contacts/save', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ contact })
+          });
+          
+          if (response.status === 401) {
+              const authResponse = await fetch('/api/auth/google/url');
+              const { url } = await authResponse.json();
+              window.open(url, 'google_auth', 'width=600,height=600');
+              return;
+          }
+
+          if (!response.ok) throw new Error('Gagal sinkronisasi kontak');
+          
+          alert(`Kontak ${contact.name} berhasil disinkronkan ke Google Contacts!`);
+      } catch (error) {
+          console.error('Contacts error:', error);
+          alert('Terjadi kesalahan saat sinkronisasi kontak.');
+      } finally {
+          setIsSyncingContact(null);
+      }
+  };
+
+  const saveReportToCalendar = async (report: SocialReport) => {
+      setIsSavingToCalendar(report.id);
+      try {
+          const response = await fetch('/api/google/calendar/save-report', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ report })
+          });
+          
+          if (response.status === 401) {
+              const authResponse = await fetch('/api/auth/google/url');
+              const { url } = await authResponse.json();
+              window.open(url, 'google_auth', 'width=600,height=600');
+              return;
+          }
+
+          if (!response.ok) throw new Error('Gagal menyimpan ke Kalender');
+          
+          const data = await response.json();
+          alert(`Laporan berhasil ditambahkan ke Google Calendar!`);
+          window.open(data.htmlLink, '_blank');
+      } catch (error) {
+          console.error('Calendar error:', error);
+          alert('Terjadi kesalahan saat menyimpan ke Kalender.');
+      } finally {
+          setIsSavingToCalendar(null);
       }
   };
 
@@ -942,6 +1032,21 @@ const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanne
                                       >
                                           <MessageCircle size={12} /> <span>WhatsApp</span>
                                       </a>
+                                      <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            saveContactToGoogle(contact);
+                                        }}
+                                        disabled={isSyncingContact === contact.id}
+                                        className="flex-1 bg-amber-500/10 text-amber-400 py-2 rounded-xl text-[10px] font-bold flex items-center justify-center space-x-1 hover:bg-amber-500/20 transition active:scale-95 border border-amber-500/20 disabled:opacity-50"
+                                      >
+                                          {isSyncingContact === contact.id ? (
+                                              <RefreshCw size={12} className="animate-spin" />
+                                          ) : (
+                                              <Users size={12} />
+                                          )}
+                                          <span>Sync</span>
+                                      </button>
                                   </div>
                               </div>
                           </motion.div>
@@ -1155,7 +1260,7 @@ const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanne
                                       </div>
                                       {/* Map Integration Button */}
                                       {report.coordinates && (
-                                          <div className="mt-4 pl-12">
+                                          <div className="mt-4 pl-12 flex flex-wrap gap-2">
                                               <a 
                                                 href={`https://www.google.com/maps/search/?api=1&query=${report.coordinates.lat},${report.coordinates.lng}`}
                                                 target="_blank"
@@ -1165,6 +1270,36 @@ const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanne
                                                   <Map size={14} />
                                                   <span>Lihat di Google Maps</span>
                                               </a>
+                                              <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    saveReportToDrive(report);
+                                                }}
+                                                disabled={isSavingToDrive === report.id}
+                                                className="inline-flex items-center space-x-2 text-xs font-bold text-green-600 border border-green-200 bg-green-50 px-3 py-2 rounded-lg hover:bg-green-100 transition disabled:opacity-50"
+                                              >
+                                                  {isSavingToDrive === report.id ? (
+                                                      <RefreshCw size={14} className="animate-spin" />
+                                                  ) : (
+                                                      <HardDrive size={14} />
+                                                  )}
+                                                  <span>Simpan ke Drive</span>
+                                              </button>
+                                              <button 
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    saveReportToCalendar(report);
+                                                }}
+                                                disabled={isSavingToCalendar === report.id}
+                                                className="inline-flex items-center space-x-2 text-xs font-bold text-amber-600 border border-amber-200 bg-amber-50 px-3 py-2 rounded-lg hover:bg-amber-100 transition disabled:opacity-50"
+                                              >
+                                                  {isSavingToCalendar === report.id ? (
+                                                      <RefreshCw size={14} className="animate-spin" />
+                                                  ) : (
+                                                      <Calendar size={14} />
+                                                  )}
+                                                  <span>Tambah ke Kalender</span>
+                                              </button>
                                           </div>
                                       )}
                                   </div>
@@ -1253,14 +1388,40 @@ const SocialView: React.FC<SocialViewProps> = ({ onOpenAiAssistant, onOpenScanne
                                   </div>
                                   <div className="flex items-center justify-between mt-4">
                                       {getStatusBadge(selectedMapReport.status)}
-                                      <a 
-                                        href={`https://www.google.com/maps/search/?api=1&query=${selectedMapReport.coordinates?.lat},${selectedMapReport.coordinates?.lng}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
-                                      >
-                                          Open Google Maps <ExternalLink size={10} />
-                                      </a>
+                                      <div className="flex flex-col items-end gap-2">
+                                          <a 
+                                            href={`https://www.google.com/maps/search/?api=1&query=${selectedMapReport.coordinates?.lat},${selectedMapReport.coordinates?.lng}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs font-bold text-blue-600 hover:underline flex items-center gap-1"
+                                          >
+                                              Open Google Maps <ExternalLink size={10} />
+                                          </a>
+                                          <button 
+                                            onClick={() => saveReportToDrive(selectedMapReport)}
+                                            disabled={isSavingToDrive === selectedMapReport.id}
+                                            className="text-[10px] font-bold text-green-600 hover:underline flex items-center gap-1 disabled:opacity-50"
+                                          >
+                                              {isSavingToDrive === selectedMapReport.id ? (
+                                                  <RefreshCw size={10} className="animate-spin" />
+                                              ) : (
+                                                  <HardDrive size={10} />
+                                              )}
+                                              Simpan ke Drive
+                                          </button>
+                                          <button 
+                                            onClick={() => saveReportToCalendar(selectedMapReport)}
+                                            disabled={isSavingToCalendar === selectedMapReport.id}
+                                            className="text-[10px] font-bold text-amber-600 hover:underline flex items-center gap-1 disabled:opacity-50"
+                                          >
+                                              {isSavingToCalendar === selectedMapReport.id ? (
+                                                  <RefreshCw size={10} className="animate-spin" />
+                                              ) : (
+                                                  <Calendar size={10} />
+                                              )}
+                                              Tambah ke Kalender
+                                          </button>
+                                      </div>
                                   </div>
                               </div>
                           )}

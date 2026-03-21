@@ -1,84 +1,95 @@
 {
   "entities": {
-    "Report": {
-      "title": "Community Report",
-      "description": "A report submitted by a community member about local issues.",
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial records for WargaPay and Market sales.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["PAYMENT", "INCOME", "SPLITTER_AUTO", "TRASH_DEPOSIT", "PARKING_FEE", "WIFI_VOUCHER", "MARKET_SALE", "TOPUP"] },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "recipient": { "type": "string" },
+        "category": { "type": "string", "enum": ["Commercial", "Social", "Savings", "Service", "Income"] },
+        "userId": { "type": "string" }
+      },
+      "required": ["id", "type", "amount", "date", "userId"]
+    },
+    "SocialReport": {
+      "title": "Social Report",
+      "description": "Citizen reports for infrastructure, health, etc.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "type": { "type": "string", "enum": ["INFRASTRUCTURE", "HEALTH", "TRASH", "SECURITY"] },
         "title": { "type": "string" },
         "description": { "type": "string" },
+        "author": { "type": "string" },
+        "authorId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
         "location": { "type": "string" },
-        "coordinates": {
-          "type": "object",
-          "properties": {
-            "lat": { "type": "number" },
-            "lng": { "type": "number" }
-          }
-        },
         "status": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "RESOLVED"] },
-        "authorId": { "type": "string" },
-        "authorName": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "votes": { "type": "integer" },
-        "voters": { "type": "array", "items": { "type": "string" } }
+        "votes": { "type": "number" },
+        "comments": { "type": "number" },
+        "coordinates": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" } } },
+        "photoUrl": { "type": "string" }
       },
-      "required": ["type", "title", "description", "location", "status", "authorId", "createdAt"]
+      "required": ["id", "type", "title", "authorId", "date"]
     },
-    "Post": {
-      "title": "Social Post",
-      "description": "A post in the community social feed.",
+    "ParkingSession": {
+      "title": "Parking Session",
+      "description": "Active and completed parking records.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "authorId": { "type": "string" },
-        "authorName": { "type": "string" },
-        "authorAvatar": { "type": "string" },
-        "content": { "type": "string" },
-        "image": { "type": "string" },
-        "likes": { "type": "integer" },
-        "comments": { "type": "integer" },
-        "shares": { "type": "integer" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "likedBy": { "type": "array", "items": { "type": "string" } }
+        "plate": { "type": "string" },
+        "type": { "type": "string", "enum": ["MOTOR", "MOBIL"] },
+        "entryTime": { "type": "string", "format": "date-time" },
+        "zoneId": { "type": "string" },
+        "status": { "type": "string", "enum": ["ACTIVE", "COMPLETED"] },
+        "cost": { "type": "number" },
+        "paymentMethod": { "type": "string", "enum": ["QRIS", "EMONEY", "CASH", "MANDIRI", "BANK_LAMPUNG"] }
       },
-      "required": ["authorId", "authorName", "content", "createdAt"]
+      "required": ["id", "plate", "entryTime", "zoneId", "status"]
     },
-    "Message": {
-      "title": "Chat Message",
-      "description": "A message sent between users.",
+    "ParkingZone": {
+      "title": "Parking Zone",
+      "description": "Parking zones in the village.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "senderId": { "type": "string" },
-        "receiverId": { "type": "string" },
-        "text": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "read": { "type": "boolean" }
+        "name": { "type": "string" },
+        "attendant": { "type": "string" },
+        "capacity": { "type": "number" },
+        "occupied": { "type": "number" },
+        "revenueToday": { "type": "number" },
+        "status": { "type": "string", "enum": ["OPEN", "FULL", "CLOSED"] },
+        "coordinates": { "type": "object", "properties": { "x": { "type": "number" }, "y": { "type": "number" } } },
+        "realCoordinates": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" } } },
+        "merchantId": { "type": "string" },
+        "price": { "type": "number" }
       },
-      "required": ["senderId", "receiverId", "text", "createdAt"]
+      "required": ["id", "name", "capacity", "occupied", "status"]
     },
-    "User": {
-      "title": "User Profile",
-      "description": "Public profile information for a community member.",
+    "IotSensor": {
+      "title": "IoT Sensor",
+      "description": "Environmental sensors (flood, air quality, waste).",
       "type": "object",
       "properties": {
-        "uid": { "type": "string" },
-        "displayName": { "type": "string" },
-        "photoURL": { "type": "string" },
-        "email": { "type": "string" },
-        "role": { "type": "string" },
-        "balance": { "type": "number" },
-        "points": { "type": "number" },
-        "wargaScore": { "type": "number" },
-        "lastSeen": { "type": "string", "format": "date-time" }
+        "id": { "type": "string" },
+        "location": { "type": "string" },
+        "type": { "type": "string", "enum": ["FLOOD", "AIR_QUALITY", "WASTE_LEVEL"] },
+        "value": { "type": "number" },
+        "unit": { "type": "string" },
+        "status": { "type": "string", "enum": ["SAFE", "WARNING", "DANGER"] },
+        "lastUpdate": { "type": "string", "format": "date-time" }
       },
-      "required": ["uid", "displayName", "email"]
+      "required": ["id", "type", "value", "status"]
     },
     "TeamTask": {
       "title": "Team Task",
-      "description": "A task assigned to a team member.",
+      "description": "Operational tasks for field officers.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -87,59 +98,40 @@
         "assignedTo": { "type": "array", "items": { "type": "string" } },
         "priority": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH", "URGENT"] },
         "status": { "type": "string", "enum": ["TODO", "IN_PROGRESS", "REVIEW", "DONE"] },
-        "dueDate": { "type": "string", "format": "date" },
-        "location": {
-          "type": "object",
-          "properties": {
-            "lat": { "type": "number" },
-            "lng": { "type": "number" },
-            "address": { "type": "string" }
-          }
-        },
-        "category": { "type": "string" }
+        "dueDate": { "type": "string", "format": "date-time" },
+        "category": { "type": "string", "enum": ["MAINTENANCE", "SECURITY", "SOCIAL", "ADMIN", "HEALTH", "ENVIRONMENT"] }
       },
-      "required": ["title", "assignedTo", "priority", "status"]
+      "required": ["id", "title", "status", "dueDate"]
     },
     "Asset": {
       "title": "Asset",
-      "description": "A community asset or equipment.",
+      "description": "Village assets like vehicles, buildings, etc.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "name": { "type": "string" },
-        "type": { "type": "string", "enum": ["VEHICLE", "EQUIPMENT", "BUILDING"] },
-        "status": { "type": "string", "enum": ["AVAILABLE", "IN_USE", "MAINTENANCE", "RETIRED"] },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["AVAILABLE", "IN_USE", "MAINTENANCE"] },
         "condition": { "type": "string", "enum": ["EXCELLENT", "GOOD", "FAIR", "POOR"] },
-        "location": {
-          "type": "object",
-          "properties": {
-            "lat": { "type": "number" },
-            "lng": { "type": "number" },
-            "address": { "type": "string" }
-          }
-        },
-        "lastMaintained": { "type": "string", "format": "date" },
-        "assignedTo": { "type": "string" },
-        "imageColor": { "type": "string" }
+        "location": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" } } }
       },
-      "required": ["name", "type", "status", "condition"]
+      "required": ["id", "name", "status"]
     },
     "BudgetLineItem": {
       "title": "Budget Line Item",
-      "description": "An item in the community budget.",
+      "description": "Budget items for village planning.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "category": { "type": "string" },
         "allocated": { "type": "number" },
-        "realized": { "type": "number" },
-        "status": { "type": "string" }
+        "realized": { "type": "number" }
       },
-      "required": ["category", "allocated", "realized"]
+      "required": ["id", "category", "allocated", "realized"]
     },
     "StuntingData": {
       "title": "Stunting Data",
-      "description": "Data point for stunting analysis.",
+      "description": "Data for stunting analysis.",
       "type": "object",
       "properties": {
         "name": { "type": "string" },
@@ -147,9 +139,9 @@
       },
       "required": ["name", "rate"]
     },
-    "ActivityLog": {
-      "title": "Activity Log",
-      "description": "A log of community activity.",
+    "Activity": {
+      "title": "Activity",
+      "description": "System activity logs.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -160,11 +152,11 @@
         "color": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["event", "detail", "createdAt"]
+      "required": ["event", "time"]
     },
     "VillageStats": {
       "title": "Village Stats",
-      "description": "Key metrics for the village.",
+      "description": "General statistics for the village.",
       "type": "object",
       "properties": {
         "totalPenduduk": { "type": "number" },
@@ -173,17 +165,56 @@
         "peringatan": { "type": "number" }
       }
     },
-    "MarketStall": {
-      "title": "Market Stall",
-      "description": "Information about a stall in the market.",
+    "EofficeSummary": {
+      "title": "Office Suite Summary",
+      "description": "Summary of e-office activities.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
+        "waitingSignature": { "type": "number" },
+        "thisMonth": { "type": "number" }
+      }
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Social media posts within the village network.",
+      "type": "object",
+      "properties": {
+        "authorId": { "type": "string" },
+        "authorName": { "type": "string" },
+        "authorAvatar": { "type": "string" },
+        "content": { "type": "string" },
+        "likes": { "type": "number" },
+        "comments": { "type": "number" },
+        "shares": { "type": "number" },
+        "likedBy": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["authorId", "content"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Chat messages between users.",
+      "type": "object",
+      "properties": {
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "read": { "type": "boolean" },
+        "isLocation": { "type": "boolean" }
+      },
+      "required": ["senderId", "receiverId", "text"]
+    },
+    "MarketStall": {
+      "title": "Market Stall",
+      "description": "A stall in the village market.",
+      "type": "object",
+      "properties": {
         "name": { "type": "string" },
         "owner": { "type": "string" },
-        "category": { "type": "string", "enum": ["KULINER", "KERAJINAN", "JASA", "FASHION"] },
-        "revenueToday": { "type": "number" },
-        "status": { "type": "string", "enum": ["OPEN", "CLOSED"] }
+        "category": { "type": "string", "enum": ["KULINER", "KERAJINAN", "JASA", "LAINNYA"] },
+        "status": { "type": "string", "enum": ["OPEN", "CLOSED"] },
+        "revenueToday": { "type": "number" }
       },
       "required": ["name", "owner", "category", "status"]
     },
@@ -192,33 +223,30 @@
       "description": "An item in the market layout (stall, table, etc.).",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
         "type": { "type": "string" },
         "label": { "type": "string" },
         "x": { "type": "number" },
         "y": { "type": "number" },
         "width": { "type": "number" },
         "height": { "type": "number" },
-        "rotation": { "type": "number" },
         "status": { "type": "string" },
-        "linkedStallId": { "type": "string" },
-        "capacity": { "type": "number" }
+        "capacity": { "type": "number" },
+        "linkedStallId": { "type": "string" }
       },
-      "required": ["type", "label", "x", "y"]
+      "required": ["type", "x", "y"]
     },
     "MarketTransaction": {
       "title": "Market Transaction",
-      "description": "A transaction record for the market (sale or top-up).",
+      "description": "A transaction made in the market.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
         "type": { "type": "string", "enum": ["MARKET_SALE", "TOPUP"] },
         "amount": { "type": "number" },
-        "description": { "type": "string" },
         "date": { "type": "string", "format": "date-time" },
         "userId": { "type": "string" },
         "stallId": { "type": "string" },
-        "paymentMethod": { "type": "string", "enum": ["QRIS", "WARGAPAY", "POINTS", "CASH"] }
+        "paymentMethod": { "type": "string" },
+        "description": { "type": "string" }
       },
       "required": ["type", "amount", "date", "userId"]
     },
@@ -227,74 +255,380 @@
       "description": "A table reservation in the market.",
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
         "tableId": { "type": "string" },
         "userId": { "type": "string" },
         "userName": { "type": "string" },
         "startTime": { "type": "string", "format": "date-time" },
-        "endTime": { "type": "string", "format": "date-time" },
         "guests": { "type": "number" },
-        "status": { "type": "string", "enum": ["PENDING", "CONFIRMED", "CANCELLED", "COMPLETED"] }
+        "status": { "type": "string" }
       },
-      "required": ["tableId", "userId", "startTime", "guests", "status"]
+      "required": ["tableId", "userId", "startTime"]
+    },
+    "MarketplaceItem": {
+      "title": "Marketplace Item",
+      "description": "Products sold by citizens in the Berdaya marketplace.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "price": { "type": "number" },
+        "seller": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "imageColor": { "type": "string" },
+        "stock": { "type": "number" }
+      },
+      "required": ["id", "name", "price", "sellerId"]
+    },
+    "ServiceProvider": {
+      "title": "Service Provider",
+      "description": "Services offered by citizens (e.g., repair, plumbing).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "unit": { "type": "string" },
+        "rating": { "type": "number" },
+        "isOpen": { "type": "boolean" },
+        "minOrder": { "type": "number" },
+        "exceptions": { "type": "string" },
+        "providerId": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "providerId"]
+    },
+    "BerdayaOrder": {
+      "title": "Berdaya Order",
+      "description": "Orders for products or services in the Berdaya module.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "enum": ["PRODUCT", "SERVICE"] },
+        "itemId": { "type": "string" },
+        "itemName": { "type": "string" },
+        "price": { "type": "number" },
+        "quantity": { "type": "number" },
+        "total": { "type": "number" },
+        "status": { "type": "string", "enum": ["PAID", "SHIPPING", "COMPLETED", "CANCELLED"] },
+        "date": { "type": "string", "format": "date-time" },
+        "sellerId": { "type": "string" },
+        "sellerName": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "trackingNumber": { "type": "string" }
+      },
+      "required": ["id", "type", "itemId", "total", "status", "buyerId", "sellerId"]
+    },
+    "RondaSchedule": {
+      "title": "Ronda Schedule",
+      "description": "Night watch schedules for citizens.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "shift": { "type": "string" },
+        "members": { "type": "array", "items": { "type": "string" } },
+        "commander": { "type": "string" },
+        "status": { "type": "string", "enum": ["UPCOMING", "ACTIVE", "COMPLETED"] }
+      },
+      "required": ["id", "date", "shift", "commander", "status"]
+    },
+    "PatrolLog": {
+      "title": "Patrol Log",
+      "description": "Logs of security patrols.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "officer": { "type": "string" },
+        "officerId": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["AMAN", "ENCURIGAKAN", "INSIDEN"] },
+        "note": { "type": "string" }
+      },
+      "required": ["id", "date", "time", "officerId", "location", "status"]
+    },
+    "SecurityCamera": {
+      "title": "Security Camera",
+      "description": "CCTV cameras in the village.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["ONLINE", "OFFLINE", "RECORDING"] },
+        "streamUrl": { "type": "string" }
+      },
+      "required": ["id", "name", "location", "status"]
+    },
+    "IotDevice": {
+      "title": "IoT Device",
+      "description": "Smart devices in the village (lights, pumps, etc.).",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["light", "sensor", "camera", "pump"] },
+        "status": { "type": "string" },
+        "value": { "type": "number" },
+        "battery": { "type": "number" },
+        "signal": { "type": "string", "enum": ["Strong", "Medium", "Weak"] },
+        "lastUpdate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "type", "status"]
+    },
+    "MusrenbangUsulan": {
+      "title": "Musrenbang Usulan",
+      "description": "Citizen proposals for village development.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "votes": { "type": "number" },
+        "category": { "type": "string" },
+        "authorId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "votes", "category"]
+    },
+    "PosyanduSchedule": {
+      "title": "Posyandu Schedule",
+      "description": "Schedules for Posyandu activities.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "location": { "type": "string" },
+        "type": { "type": "string", "enum": ["BALITA", "LANSIA", "REMAJA", "IBU_HAMIL"] },
+        "status": { "type": "string", "enum": ["UPCOMING", "ONGOING", "COMPLETED"] }
+      },
+      "required": ["id", "title", "date", "location", "type", "status"]
+    },
+    "ChildGrowth": {
+      "title": "Child Growth Record",
+      "description": "Growth records for children at Posyandu.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "childId": { "type": "string" },
+        "childName": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "weight": { "type": "number" },
+        "height": { "type": "number" },
+        "headCircumference": { "type": "number" },
+        "notes": { "type": "string" },
+        "status": { "type": "string", "enum": ["NORMAL", "UNDERWEIGHT", "STUNTING_RISK", "OVERWEIGHT"] }
+      },
+      "required": ["id", "childId", "date", "weight", "height"]
+    },
+    "OperationalLog": {
+      "title": "Operational Log",
+      "description": "Detailed logs for operational tracking.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "activity": { "type": "string" },
+        "status": { "type": "string" },
+        "progress": { "type": "number" },
+        "location": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" } } },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "officer": { "type": "string" }
+      },
+      "required": ["id", "activity", "status", "timestamp"]
+    },
+    "CreativeFinance": {
+      "title": "Creative Finance Project",
+      "description": "Community-funded or creative financing projects.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "goalAmount": { "type": "number" },
+        "currentAmount": { "type": "number" },
+        "backers": { "type": "number" },
+        "status": { "type": "string", "enum": ["FUNDING", "ACTIVE", "COMPLETED"] },
+        "category": { "type": "string" },
+        "imageUrl": { "type": "string" }
+      },
+      "required": ["id", "title", "goalAmount", "currentAmount", "status"]
+    },
+    "CourierStatus": {
+      "title": "Courier Status",
+      "description": "Real-time status and location of Anjelo couriers.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["ONLINE", "OFFLINE", "BUSY"] },
+        "location": { "type": "object", "properties": { "lat": { "type": "number" }, "lng": { "type": "number" } } },
+        "vehicleType": { "type": "string" },
+        "plateNumber": { "type": "string" },
+        "rating": { "type": "number" },
+        "totalDeliveries": { "type": "number" },
+        "earningsToday": { "type": "number" }
+      },
+      "required": ["uid", "name", "status"]
+    },
+    "User": {
+      "title": "User Profile",
+      "description": "Citizen profile data.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string" },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "phoneNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "bio": { "type": "string" },
+        "nik": { "type": "string" },
+        "userType": { "type": "string", "enum": ["citizen", "business_entity", "government"] },
+        "balance": { "type": "number" },
+        "points": { "type": "number" },
+        "wargaScore": { "type": "number" },
+        "occupation": { "type": "string" },
+        "birthDate": { "type": "string", "format": "date" }
+      },
+      "required": ["uid", "email", "role"]
     }
   },
   "firestore": {
-    "reports": {
-      "schema": "Report",
-      "description": "Collection of community reports."
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "Global transaction log."
     },
-    "posts": {
-      "schema": "Post",
-      "description": "Collection of social feed posts."
+    "/reports/{reportId}": {
+      "schema": "SocialReport",
+      "description": "Citizen reports."
     },
-    "messages": {
-      "schema": "Message",
-      "description": "Collection of chat messages."
+    "/parking_sessions/{sessionId}": {
+      "schema": "ParkingSession",
+      "description": "Parking records."
     },
-    "users": {
-      "schema": "User",
-      "description": "Collection of user profiles."
+    "/parking/{zoneId}": {
+      "schema": "ParkingZone",
+      "description": "Parking zones."
     },
-    "tasks": {
+    "/sensors/{sensorId}": {
+      "schema": "IotSensor",
+      "description": "IoT sensors."
+    },
+    "/tasks/{taskId}": {
       "schema": "TeamTask",
-      "description": "Collection of team tasks."
+      "description": "Operational tasks."
     },
-    "assets": {
+    "/assets/{assetId}": {
       "schema": "Asset",
-      "description": "Collection of community assets."
+      "description": "Village assets."
     },
-    "budget": {
+    "/budget/{itemId}": {
       "schema": "BudgetLineItem",
-      "description": "Collection of budget items."
+      "description": "Budget items."
     },
-    "stunting": {
+    "/stunting/{id}": {
       "schema": "StuntingData",
-      "description": "Collection of stunting data points."
+      "description": "Stunting analysis data."
     },
-    "activities": {
-      "schema": "ActivityLog",
-      "description": "Collection of activity logs."
+    "/activities/{id}": {
+      "schema": "Activity",
+      "description": "System activity logs."
     },
-    "stats": {
+    "/stats/village_stats": {
       "schema": "VillageStats",
-      "description": "Singleton collection for village stats."
+      "description": "General village statistics."
     },
-    "market_stalls": {
+    "/stats/eoffice": {
+      "schema": "EofficeSummary",
+      "description": "E-office summary."
+    },
+    "/posts/{postId}": {
+      "schema": "Post",
+      "description": "Social posts."
+    },
+    "/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Chat messages."
+    },
+    "/market_stalls/{stallId}": {
       "schema": "MarketStall",
-      "description": "Collection of market stalls."
+      "description": "Market stalls."
     },
-    "market_layout": {
+    "/market_layout/{itemId}": {
       "schema": "MarketLayoutItem",
-      "description": "Collection of market layout items."
+      "description": "Market layout items."
     },
-    "market_transactions": {
+    "/market_transactions/{transactionId}": {
       "schema": "MarketTransaction",
-      "description": "Collection of market transactions."
+      "description": "Market transactions."
     },
-    "market_reservations": {
+    "/market_reservations/{reservationId}": {
       "schema": "MarketReservation",
-      "description": "Collection of market reservations."
+      "description": "Market reservations."
+    },
+    "/marketplace_items/{itemId}": {
+      "schema": "MarketplaceItem",
+      "description": "Berdaya marketplace items."
+    },
+    "/service_providers/{providerId}": {
+      "schema": "ServiceProvider",
+      "description": "Berdaya service providers."
+    },
+    "/berdaya_orders/{orderId}": {
+      "schema": "BerdayaOrder",
+      "description": "Berdaya orders."
+    },
+    "/ronda_schedules/{scheduleId}": {
+      "schema": "RondaSchedule",
+      "description": "Ronda schedules."
+    },
+    "/patrol_logs/{logId}": {
+      "schema": "PatrolLog",
+      "description": "Patrol logs."
+    },
+    "/security_cameras/{cameraId}": {
+      "schema": "SecurityCamera",
+      "description": "Security cameras."
+    },
+    "/iot_devices/{deviceId}": {
+      "schema": "IotDevice",
+      "description": "IoT devices."
+    },
+    "/musrenbang/{usulanId}": {
+      "schema": "MusrenbangUsulan",
+      "description": "Musrenbang proposals."
+    },
+    "/posyandu_schedules/{id}": {
+      "schema": "PosyanduSchedule",
+      "description": "Posyandu schedules."
+    },
+    "/child_growth/{id}": {
+      "schema": "ChildGrowth",
+      "description": "Child growth records."
+    },
+    "/operational_logs/{id}": {
+      "schema": "OperationalLog",
+      "description": "Operational tracking logs."
+    },
+    "/creative_finance/{id}": {
+      "schema": "CreativeFinance",
+      "description": "Creative finance projects."
+    },
+    "/courier_status/{userId}": {
+      "schema": "CourierStatus",
+      "description": "Real-time courier status."
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles."
     }
   }
 }

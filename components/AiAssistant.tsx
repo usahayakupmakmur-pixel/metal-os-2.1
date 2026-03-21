@@ -16,6 +16,9 @@ interface AiAssistantProps {
     title?: string;
     content?: string;
     type?: string;
+    user?: any;
+    systemStatus?: string;
+    location?: string;
   };
 }
 
@@ -26,7 +29,9 @@ const AiAssistant: React.FC<AiAssistantProps> = ({ isOpen, onClose, currentView,
     {
       id: 'welcome',
       role: 'model',
-      text: `Halo! Saya asisten AI MetalOS. Saya melihat Anda sedang berada di modul **${currentView}**${context?.title ? ` dan sedang membuka "${context.title}"` : ''}. Ada yang bisa saya bantu mengenai data Kelurahan Yosomulyo atau informasi terkini?`,
+      text: `Halo ${context?.user?.name || 'Warga'}! Saya asisten AI MetalOS. Saya melihat Anda sedang berada di modul **${currentView}**${context?.title ? ` dan sedang membuka "${context.title}"` : ''}. 
+
+Sistem saat ini berstatus **${context?.systemStatus || 'ONLINE'}** di lokasi **${context?.location || 'Kota Metro'}**. Ada yang bisa saya bantu mengenai data Kelurahan Yosomulyo atau informasi terkini?`,
       timestamp: new Date()
     }
   ]);

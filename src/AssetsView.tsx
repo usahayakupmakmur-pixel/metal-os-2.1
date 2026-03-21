@@ -14,22 +14,25 @@ import {
   Plus, 
   Activity,
   History,
-  Scan
+  Scan,
+  Globe
 } from 'lucide-react';
-import { ASSETS } from '../constants';
-import { Asset } from '../types';
+import { ASSETS, MOCK_USER } from '../constants';
+import { Asset, CitizenProfile } from '../types';
 import GeospatialEngine from '../components/GeospatialEngine';
 
 interface AssetsViewProps {
+  user?: CitizenProfile;
   onOpenScanner?: () => void;
   pendingAssetId?: string | null;
 }
 
-const AssetsView: React.FC<AssetsViewProps> = ({ onOpenScanner, pendingAssetId }) => {
+const AssetsView: React.FC<AssetsViewProps> = ({ user = MOCK_USER, onOpenScanner, pendingAssetId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const [isGeeMode, setIsGeeMode] = useState(false);
 
   // Handle external asset selection
   React.useEffect(() => {
@@ -88,12 +91,22 @@ const AssetsView: React.FC<AssetsViewProps> = ({ onOpenScanner, pendingAssetId }
           <p className="text-sm text-slate-400">Track and maintain community physical assets</p>
         </div>
         <div className="flex gap-2">
-          <button 
-            onClick={() => setShowMap(!showMap)}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700"
-          >
-            <MapPin className={`w-5 h-5 ${showMap ? 'text-blue-400' : 'text-slate-400'}`} />
-          </button>
+            <button 
+              onClick={() => setShowMap(!showMap)}
+              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700"
+              title="Toggle Map View"
+            >
+              <MapPin className={`w-5 h-5 ${showMap ? 'text-blue-400' : 'text-slate-400'}`} />
+            </button>
+            {showMap && (
+              <button 
+                onClick={() => setIsGeeMode(!isGeeMode)}
+                className={`p-2 rounded-lg transition-colors border ${isGeeMode ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}
+                title="Toggle Google Earth Engine"
+              >
+                <Globe className="w-5 h-5" />
+              </button>
+            )}
           <button 
             onClick={onOpenScanner}
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-all border border-slate-700"
@@ -209,6 +222,8 @@ const AssetsView: React.FC<AssetsViewProps> = ({ onOpenScanner, pendingAssetId }
             <GeospatialEngine 
               center={selectedAsset?.location ? { lat: selectedAsset.location.lat, lng: selectedAsset.location.lng } : { lat: -5.1188, lng: 105.3075 }}
               zoom={15}
+              isGeeMode={isGeeMode}
+              geeLayers={{ ndvi: false, nightlights: true, landcover: false, water: false, terrain: false, population: false }}
               points={filteredAssets.filter(a => a.location).map(a => ({
                 id: a.id,
                 position: { lat: a.location!.lat, lng: a.location!.lng },

@@ -12,22 +12,25 @@ import {
   ChevronRight,
   MoreVertical,
   Calendar,
-  Scan
+  Scan,
+  Globe
 } from 'lucide-react';
-import { TEAM_TASKS } from '../constants';
-import { TeamTask } from '../types';
+import { TEAM_TASKS, MOCK_USER } from '../constants';
+import { TeamTask, CitizenProfile } from '../types';
 import GeospatialEngine from '../components/GeospatialEngine';
 
 interface TasksViewProps {
+  user?: CitizenProfile;
   onOpenScanner?: () => void;
   pendingTaskId?: string | null;
 }
 
-const TasksView: React.FC<TasksViewProps> = ({ onOpenScanner, pendingTaskId }) => {
+const TasksView: React.FC<TasksViewProps> = ({ user = MOCK_USER, onOpenScanner, pendingTaskId }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
   const [selectedTask, setSelectedTask] = useState<TeamTask | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const [isGeeMode, setIsGeeMode] = useState(false);
 
   // Handle external task selection
   React.useEffect(() => {
@@ -77,12 +80,22 @@ const TasksView: React.FC<TasksViewProps> = ({ onOpenScanner, pendingTaskId }) =
           <p className="text-sm text-slate-400">Manage and track community maintenance & operations</p>
         </div>
         <div className="flex gap-2">
-          <button 
-            onClick={() => setShowMap(!showMap)}
-            className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700"
-          >
-            <MapPin className={`w-5 h-5 ${showMap ? 'text-blue-400' : 'text-slate-400'}`} />
-          </button>
+            <button 
+              onClick={() => setShowMap(!showMap)}
+              className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700"
+              title="Toggle Map View"
+            >
+              <MapPin className={`w-5 h-5 ${showMap ? 'text-blue-400' : 'text-slate-400'}`} />
+            </button>
+            {showMap && (
+              <button 
+                onClick={() => setIsGeeMode(!isGeeMode)}
+                className={`p-2 rounded-lg transition-colors border ${isGeeMode ? 'bg-cyan-500/20 border-cyan-500 text-cyan-400' : 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700'}`}
+                title="Toggle Google Earth Engine"
+              >
+                <Globe className="w-5 h-5" />
+              </button>
+            )}
           <button 
             onClick={onOpenScanner}
             className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg font-medium transition-all border border-slate-700"
@@ -197,6 +210,8 @@ const TasksView: React.FC<TasksViewProps> = ({ onOpenScanner, pendingTaskId }) =
             <GeospatialEngine 
               center={selectedTask?.location ? { lat: selectedTask.location.lat, lng: selectedTask.location.lng } : { lat: -5.1188, lng: 105.3075 }}
               zoom={15}
+              isGeeMode={isGeeMode}
+              geeLayers={{ ndvi: true, nightlights: false, landcover: false, water: false, terrain: false, population: false }}
               points={filteredTasks.filter(t => t.location).map(t => ({
                 id: t.id,
                 position: { lat: t.location!.lat, lng: t.location!.lng },

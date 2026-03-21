@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Wifi, Zap, Battery, Smartphone, BookOpen, Video, Download, CheckCircle, Sun, Signal, Monitor, UploadCloud, File, Play, Pause, MessageCircle, ShoppingBag, FileText, Stethoscope, X, PhoneCall, Facebook, Instagram, Youtube, Send, Globe, Laptop, Airplay, StopCircle, Tv, Film, Radio, Home, Settings, Store, Cloud, Clock, BarChart3, ShieldCheck, Mail, FileSignature, Table, Presentation, Cast, PlayCircle, Info, Music, Star, ChevronRight, Search, Wallet, Briefcase, Lock, Activity, AlertTriangle, Calendar, Bell, Keyboard, XCircle, List, Power, Delete, Plus, AlertOctagon, SkipForward } from 'lucide-react';
+import { Wifi, Zap, Battery, Smartphone, BookOpen, Video, Download, CheckCircle, Sun, Signal, Monitor, UploadCloud, File, Play, Pause, MessageCircle, ShoppingBag, FileText, Stethoscope, X, PhoneCall, Facebook, Instagram, Youtube, Send, Globe, Laptop, Airplay, StopCircle, Tv, Film, Radio, Home, Settings, Store, Cloud, Clock, BarChart3, ShieldCheck, Mail, FileSignature, Table, Presentation, Cast, PlayCircle, Info, Music, Star, ChevronRight, Search, Wallet, Briefcase, Lock, Activity, AlertTriangle, Calendar, Bell, Keyboard, XCircle, List, Power, Delete, Plus, AlertOctagon, SkipForward, Eye, UserPlus, Shield, Scan, MapPin, History, RefreshCw } from 'lucide-react';
 import { LIBRARY_CONTENT, CAST_ZONES, SHARED_FILES, MARKETPLACE_ITEMS, MOCK_USER, SECURITY_CAMERAS, BUDGET_DATA, EOFFICE_SUMMARY, RONDA_SCHEDULES, POSYANDU_SESSIONS, SOCIAL_REPORTS } from '../constants';
-import { MarketplaceItem, LibraryContent, SharedFile, CastZone, CitizenProfile } from '../types';
+import { MarketplaceItem, LibraryContent, SharedFile, CastZone, CitizenProfile, VisitorLog, SecurityAlert } from '../types';
+import { subscribeToVisitorLogs } from '../src/services/visitorLogService';
+import { subscribeToSecurityAlerts } from '../src/services/securityAlertService';
 
 interface GapuraViewProps {
   user?: CitizenProfile;
@@ -38,7 +40,30 @@ const GapuraView: React.FC<GapuraViewProps> = ({ user = MOCK_USER, isTvMode, onT
   const [tvOverlay, setTvOverlay] = useState<'NONE' | 'AGENDA' | 'NOTIFICATIONS'>('NONE');
 
   // Admin Console State
-  const [adminTab, setAdminTab] = useState<'INFO' | 'CAST' | 'SHARE'>('INFO');
+  const [adminTab, setAdminTab] = useState<'INFO' | 'CAST' | 'SHARE' | 'SECURITY'>('INFO');
+  const [visitorLogs, setVisitorLogs] = useState<VisitorLog[]>([]);
+  const [securityAlerts, setSecurityAlerts] = useState<SecurityAlert[]>([]);
+  
+  useEffect(() => {
+    const unsubscribeLogs = subscribeToVisitorLogs(
+      (logsData) => setVisitorLogs(logsData),
+      (error) => console.error('Error fetching visitor logs:', error)
+    );
+    const unsubscribeAlerts = subscribeToSecurityAlerts(
+      (alertsData) => setSecurityAlerts(alertsData),
+      (error) => console.error('Error fetching security alerts:', error)
+    );
+    return () => {
+      unsubscribeLogs();
+      unsubscribeAlerts();
+    };
+  }, []);
+
+  const [isScanning, setIsScanning] = useState(false);
+  const [guestForm, setGuestForm] = useState({ name: '', purpose: '', phone: '' });
+  const [showGuestForm, setShowGuestForm] = useState(false);
+  const [activeCameraId, setActiveCameraId] = useState<string>('cam1');
+
   const [localCastZones, setLocalCastZones] = useState<EnhancedCastZone[]>(
       CAST_ZONES.map((z, i) => ({
           ...z,
@@ -158,6 +183,26 @@ const GapuraView: React.FC<GapuraViewProps> = ({ user = MOCK_USER, isTvMode, onT
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isTvMode, tvPlaying, tvNavState, activeTvPage, tvOverlay]);
 
+
+  // Simulate Visitor/Security Activity
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (Math.random() > 0.7) {
+        const names = ['Ahmad', 'Siti', 'Budi', 'Joko', 'Ani'];
+        const types: VisitorLog['type'][] = ['RESIDENT', 'GUEST', 'DELIVERY'];
+        const newLog: VisitorLog = {
+          id: `v_${Date.now()}`,
+          name: names[Math.floor(Math.random() * names.length)],
+          type: types[Math.floor(Math.random() * types.length)],
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          method: Math.random() > 0.5 ? 'CAMERA' : 'WIFI',
+          status: 'AUTHORIZED'
+        };
+        setVisitorLogs(prev => [newLog, ...prev.slice(0, 9)]);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleConnectWifi = () => {
     setPortalStep('CONNECTING');
@@ -399,10 +444,69 @@ const GapuraView: React.FC<GapuraViewProps> = ({ user = MOCK_USER, isTvMode, onT
                               >
                                  <Wifi size={16} /> Hubungkan Warganet
                               </button>
-                              <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-4 rounded-2xl font-bold text-sm transition-all">
-                                 Login Tamu
+                              <button 
+                                 onClick={() => setShowGuestForm(true)}
+                                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2"
+                              >
+                                 <UserPlus size={16} /> Registrasi Tamu
                               </button>
                           </div>
+
+                          {showGuestForm && (
+                              <div className="absolute inset-0 bg-white z-50 p-6 animate-in slide-in-from-right duration-300">
+                                  <div className="flex justify-between items-center mb-8">
+                                      <h3 className="text-xl font-black text-slate-900">Buku Tamu</h3>
+                                      <button onClick={() => setShowGuestForm(false)} className="p-2 bg-slate-100 rounded-full">
+                                          <X size={20} />
+                                      </button>
+                                  </div>
+                                  <div className="space-y-4">
+                                      <div>
+                                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Nama Lengkap</label>
+                                          <input 
+                                              type="text" 
+                                              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                              placeholder="Contoh: John Doe"
+                                              value={guestForm.name}
+                                              onChange={e => setGuestForm({...guestForm, name: e.target.value})}
+                                          />
+                                      </div>
+                                      <div>
+                                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Tujuan Kunjungan</label>
+                                          <input 
+                                              type="text" 
+                                              className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                              placeholder="Contoh: Bertamu ke RW 07"
+                                              value={guestForm.purpose}
+                                              onChange={e => setGuestForm({...guestForm, purpose: e.target.value})}
+                                          />
+                                      </div>
+                                      <button 
+                                          onClick={() => {
+                                              setIsScanning(true);
+                                              setTimeout(() => {
+                                                  setIsScanning(false);
+                                                  setShowGuestForm(false);
+                                                  setGuestForm({ name: '', purpose: '', phone: '' });
+                                                  const newLog: VisitorLog = {
+                                                      id: `v_${Date.now()}`,
+                                                      name: guestForm.name || 'Guest',
+                                                      type: 'GUEST',
+                                                      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                                      method: 'MANUAL',
+                                                      status: 'AUTHORIZED'
+                                                  };
+                                                  setVisitorLogs(prev => [newLog, ...prev]);
+                                              }, 2000);
+                                          }}
+                                          className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold text-sm shadow-lg shadow-blue-600/20 active:scale-95 transition flex items-center justify-center gap-2"
+                                      >
+                                          {isScanning ? <RefreshCw className="animate-spin" size={16} /> : <Scan size={16} />}
+                                          {isScanning ? 'Memproses...' : 'Daftar & Masuk'}
+                                      </button>
+                                  </div>
+                              </div>
+                          )}
                        </div>
                     </div>
                  )}
@@ -513,13 +617,18 @@ const GapuraView: React.FC<GapuraViewProps> = ({ user = MOCK_USER, isTvMode, onT
                   >
                       <UploadCloud size={18} /> <span>WargaShare</span>
                   </button>
+                  <button 
+                      onClick={() => setAdminTab('SECURITY')}
+                      className={`flex-1 py-3 text-sm font-bold flex items-center justify-center space-x-2 relative z-10 transition-colors ${adminTab === 'SECURITY' ? 'text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                      <Shield size={18} /> <span>Security</span>
+                  </button>
               </div>
 
               {/* Tab Content (Admin Console content unchanged) */}
               <div className="p-8 flex-1">
                   {adminTab === 'INFO' && (
                       <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
-                          {/* ... (Info Tab Content) ... */}
                           <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2rem] p-8 text-white shadow-2xl shadow-blue-600/20 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4"></div>
                             <h2 className="text-2xl font-black mb-4 flex items-center relative z-10">
@@ -544,13 +653,37 @@ const GapuraView: React.FC<GapuraViewProps> = ({ user = MOCK_USER, isTvMode, onT
                                 </div>
                             </div>
                           </div>
-                          {/* ... */}
+
+                          <div className="grid grid-cols-2 gap-6">
+                              <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100">
+                                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Traffic Analysis</h4>
+                                  <div className="space-y-4">
+                                      <div className="flex justify-between items-end">
+                                          <span className="text-sm font-bold text-slate-600">Peak Load</span>
+                                          <span className="text-xl font-black text-slate-900">18:00 - 21:00</span>
+                                      </div>
+                                      <div className="h-20 flex items-end gap-1">
+                                          {[40, 60, 45, 90, 100, 80, 50, 30, 40, 70, 85, 60].map((h, i) => (
+                                              <div key={i} className="flex-1 bg-blue-500/20 rounded-t-sm relative group">
+                                                  <div className="absolute bottom-0 left-0 right-0 bg-blue-600 rounded-t-sm transition-all duration-500" style={{height: `${h}%`}}></div>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </div>
+                              </div>
+                              <div className="bg-slate-50 rounded-3xl p-6 border border-slate-100 flex flex-col justify-center items-center text-center">
+                                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4">
+                                      <ShieldCheck size={32} />
+                                  </div>
+                                  <h4 className="font-bold text-slate-800">Security Verified</h4>
+                                  <p className="text-xs text-slate-500 mt-1">Semua node terenkripsi end-to-end dengan standar AES-256.</p>
+                              </div>
+                          </div>
                       </div>
                   )}
-                  {/* ... (Other tabs truncated for brevity, assuming they exist as per previous code) ... */}
+
                   {adminTab === 'CAST' && (
                       <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 relative h-full flex flex-col">
-                          {/* ... */}
                           <div className="flex justify-between items-center mb-4">
                               <div>
                                 <h3 className="font-bold text-slate-800">Zone Controller</h3>
@@ -568,11 +701,10 @@ const GapuraView: React.FC<GapuraViewProps> = ({ user = MOCK_USER, isTvMode, onT
                                   {emergencyMode ? 'DISABLE EMERGENCY' : 'EMERGENCY BROADCAST'}
                               </button>
                           </div>
-                          {/* ... */}
+
                           <div className="grid grid-cols-1 gap-4">
                             {localCastZones.map((zone) => (
                                 <div key={zone.id} className={`bg-white p-4 rounded-xl border transition-all duration-300 shadow-sm flex flex-col gap-3 ${zone.status === 'PLAYING' ? 'border-blue-200 ring-1 ring-blue-100' : 'border-slate-200'}`}>
-                                    {/* Zone Header */}
                                     <div className="flex justify-between items-start">
                                         <div className="flex items-center gap-3">
                                             <div className={`p-2 rounded-lg ${zone.status === 'PLAYING' ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400'}`}>
@@ -603,15 +735,41 @@ const GapuraView: React.FC<GapuraViewProps> = ({ user = MOCK_USER, isTvMode, onT
                                             </button>
                                         </div>
                                     </div>
-                                    {/* ... Preview Row ... */}
+
+                                    <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-1.5 bg-white rounded shadow-sm text-blue-600">
+                                                {getSourceIcon(zone.sourceType)}
+                                            </div>
+                                            <div className="overflow-hidden">
+                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Current Content</p>
+                                                <p className="text-xs font-bold text-slate-700 truncate">{zone.currentContent}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={() => cycleSourceType(zone.id)} className="p-1.5 rounded hover:bg-white text-slate-400 transition" title="Change Source"><RefreshCw size={14} /></button>
+                                            <button onClick={() => skipContent(zone.id)} className="p-1.5 rounded hover:bg-white text-slate-400 transition" title="Skip"><SkipForward size={14} /></button>
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                           </div>
                       </div>
                   )}
+
                   {adminTab === 'SHARE' && (
                       <div className="space-y-4 animate-in fade-in">
-                          {/* ... Share content ... */}
+                          <div className="flex justify-between items-center">
+                              <h3 className="font-bold text-slate-800">WargaShare</h3>
+                              <button 
+                                onClick={triggerFileUpload}
+                                className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition"
+                              >
+                                  <Plus size={16} /> Upload File
+                              </button>
+                              <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+                          </div>
+
                           <div 
                               onClick={triggerFileUpload}
                               className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex flex-col items-center justify-center border-dashed border-2 cursor-pointer hover:bg-blue-100 transition"
@@ -620,14 +778,153 @@ const GapuraView: React.FC<GapuraViewProps> = ({ user = MOCK_USER, isTvMode, onT
                               <p className="text-sm font-bold text-slate-700">Drop files to upload</p>
                               <p className="text-xs text-slate-400">or click to browse local storage</p>
                           </div>
+
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 no-scrollbar">
+                              {sharedFiles.map(file => (
+                                  <div key={file.id} className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-100 hover:border-blue-200 transition group">
+                                      <div className="flex items-center gap-3">
+                                          <div className={`p-2 rounded-lg ${file.type === 'PDF' ? 'bg-red-50 text-red-600' : file.type === 'IMG' ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-600'}`}>
+                                              <File size={18} />
+                                          </div>
+                                          <div>
+                                              <p className="text-xs font-bold text-slate-800 truncate max-w-[150px]">{file.name}</p>
+                                              <p className="text-[10px] text-slate-400">{file.size} • {file.date}</p>
+                                          </div>
+                                      </div>
+                                      <button className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition opacity-0 group-hover:opacity-100">
+                                          <Download size={16} />
+                                      </button>
+                                  </div>
+                              ))}
+                          </div>
                       </div>
                   )}
+
+                  {adminTab === 'SECURITY' && (
+                      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* Live Camera Feed */}
+                              <div className="bg-slate-900 rounded-[2rem] overflow-hidden relative group border border-slate-800 shadow-2xl">
+                                  <div className="aspect-video bg-slate-800 relative">
+                                      {/* Camera Overlay */}
+                                      <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1557597774-9d273605dfa9?q=80&w=2070')] bg-cover bg-center opacity-60"></div>
+                                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40"></div>
+                                      
+                                      {/* Scanning Effect */}
+                                      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                                          <div className="w-full h-0.5 bg-green-500/50 absolute top-0 animate-[scan_3s_linear_infinite] shadow-[0_0_15px_rgba(34,211,238,0.8)]"></div>
+                                      </div>
+
+                                      {/* Camera UI */}
+                                      <div className="absolute top-4 left-4 flex items-center gap-2">
+                                          <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                                          <span className="text-[10px] font-bold text-white uppercase tracking-widest">REC • {SECURITY_CAMERAS.find(c => c.id === activeCameraId)?.name}</span>
+                                      </div>
+                                      <div className="absolute bottom-4 right-4 text-[10px] font-mono text-white/70">
+                                          {new Date().toISOString()}
+                                      </div>
+
+                                      {/* AI Detection Overlays */}
+                                      <div className="absolute top-1/4 left-1/3 border-2 border-green-500/50 w-24 h-40 rounded-lg flex flex-col items-center justify-start p-1">
+                                          <span className="bg-green-500 text-black text-[8px] font-bold px-1 rounded">PERSON</span>
+                                      </div>
+                                      <div className="absolute bottom-1/4 right-1/4 border-2 border-blue-500/50 w-32 h-20 rounded-lg flex flex-col items-center justify-start p-1">
+                                          <span className="bg-blue-500 text-white text-[8px] font-bold px-1 rounded">VEHICLE: B 1234 XYZ</span>
+                                      </div>
+                                  </div>
+                                  <div className="p-4 flex gap-2 overflow-x-auto no-scrollbar">
+                                      {SECURITY_CAMERAS.map(cam => (
+                                          <button 
+                                              key={cam.id}
+                                              onClick={() => setActiveCameraId(cam.id)}
+                                              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all ${activeCameraId === cam.id ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                          >
+                                              {cam.name}
+                                          </button>
+                                      ))}
+                                  </div>
+                              </div>
+
+                              {/* Security Alerts */}
+                              <div className="space-y-4">
+                                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                      <AlertTriangle size={14} className="text-orange-500" /> Active Alerts
+                                  </h4>
+                                  <div className="space-y-3">
+                                      {securityAlerts.map(alert => (
+                                          <div key={alert.id} className={`p-4 rounded-2xl border flex items-center gap-4 transition-all ${alert.severity === 'HIGH' ? 'bg-red-50 border-red-100' : 'bg-orange-50 border-orange-100'}`}>
+                                              <div className={`p-2 rounded-xl ${alert.severity === 'HIGH' ? 'bg-red-500 text-white' : 'bg-orange-500 text-white'}`}>
+                                                  <AlertOctagon size={20} />
+                                              </div>
+                                              <div className="flex-1">
+                                                  <div className="flex justify-between items-start">
+                                                      <h5 className="font-bold text-slate-800 text-sm">{alert.type}</h5>
+                                                      <span className="text-[10px] font-bold text-slate-400">{alert.time}</span>
+                                                  </div>
+                                                  <p className="text-xs text-slate-500">{alert.location}</p>
+                                              </div>
+                                              <button className="p-2 hover:bg-white/50 rounded-lg transition">
+                                                  <ChevronRight size={16} />
+                                              </button>
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+                          </div>
+
+                          {/* Visitor Logs */}
+                          <div className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm">
+                              <div className="flex justify-between items-center mb-6">
+                                  <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                                      <History size={18} className="text-blue-600" /> Visitor Activity Log
+                                  </h4>
+                                  <button className="text-xs font-bold text-blue-600 hover:underline">View Full Report</button>
+                              </div>
+                              <div className="space-y-4">
+                                  {visitorLogs.map(log => (
+                                      <div key={log.id} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-2xl transition group">
+                                          <div className="flex items-center gap-4">
+                                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                                  log.type === 'RESIDENT' ? 'bg-blue-100 text-blue-600' : 
+                                                  log.type === 'DELIVERY' ? 'bg-orange-100 text-orange-600' : 
+                                                  'bg-slate-100 text-slate-600'
+                                              }`}>
+                                                  {log.type === 'RESIDENT' ? <Home size={18} /> : 
+                                                   log.type === 'DELIVERY' ? <ShoppingBag size={18} /> : 
+                                                   <UserPlus size={18} />}
+                                              </div>
+                                              <div>
+                                                  <h5 className="font-bold text-slate-800 text-sm">{log.name}</h5>
+                                                  <div className="flex items-center gap-2">
+                                                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{log.type}</span>
+                                                      <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                                      <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                                          {log.method === 'CAMERA' ? <Video size={10} /> : <Wifi size={10} />} {log.method}
+                                                      </span>
+                                                  </div>
+                                              </div>
+                                          </div>
+                                          <div className="text-right">
+                                              <p className="text-xs font-bold text-slate-800">{log.time}</p>
+                                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                                  log.status === 'AUTHORIZED' ? 'bg-green-100 text-green-600' : 
+                                                  log.status === 'FLAGGED' ? 'bg-red-100 text-red-600' : 
+                                                  'bg-yellow-100 text-yellow-600'
+                                              }`}>
+                                                  {log.status}
+                                              </span>
+                                          </div>
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                      </div>
+                  )}
+              </div>
               </div>
            </div>
         </div>
 
-      </div>
-      
       {/* --- METAL TV OS 4.0 ULTRA MODERN GLASS --- */}
       {isTvMode && (
           <div className="fixed inset-0 z-[200] bg-slate-950 text-white overflow-hidden font-sans animate-in zoom-in duration-500 select-none cursor-none">

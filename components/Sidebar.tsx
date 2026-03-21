@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { ViewMode, CitizenProfile } from '../types';
 import { SecurityService } from '../services/securityService';
-import { LayoutDashboard, Building2, Wallet, Leaf, Users, Settings, Activity, Router, Briefcase, Siren, Store, ChevronLeft, ChevronRight, Car, HeartPulse, ShoppingBag, GraduationCap, Lock, Phone, Wifi, Trash2, Cpu, Target, Map, CheckCircle2, Package, Folder, FileText } from 'lucide-react';
+import { Home, Building2, Wallet, Leaf, Users, Settings, Activity, Router, Briefcase, Siren, Store, ChevronLeft, ChevronRight, Car, HeartPulse, ShoppingBag, GraduationCap, Lock, Phone, Wifi, Trash2, Cpu, Target, Map, CheckCircle2, Package, Folder, FileText, Globe, User, Shield, Fingerprint, LayoutGrid } from 'lucide-react';
 import { MOCK_USER } from '../constants';
 
 interface SidebarProps {
@@ -34,25 +34,19 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isCollapse
   const activeUser = user || MOCK_USER;
 
   const allMenuItems = [
-    { mode: ViewMode.DASHBOARD, label: 'Dasbor', icon: LayoutDashboard },
-    { mode: ViewMode.GOVERNANCE, label: 'Tata Kelola', icon: Building2 },
-    { mode: ViewMode.EOFFICE, label: 'Ruang Kerja', icon: Briefcase },
-    { mode: ViewMode.TASKS, label: 'Team Tasks', icon: CheckCircle2 },
-    { mode: ViewMode.ASSETS, label: 'Asset Management', icon: Package },
-    { mode: ViewMode.TRACKER, label: 'Operational Tracker', icon: Activity },
+    { mode: ViewMode.DASHBOARD, label: 'Home', icon: Home },
+    { mode: ViewMode.PROFILE, label: 'Profil Warga', icon: User },
+    { mode: ViewMode.GOVERNANCE, label: 'Governance Dashboard', icon: Building2 },
+    { mode: ViewMode.OFFICE_SUITE, label: 'Office Suite', icon: Briefcase },
     { mode: ViewMode.BERDAYA, label: 'Berdaya (Niaga)', icon: ShoppingBag },
     { mode: ViewMode.ECONOMY, label: 'Keuangan', icon: Wallet },
-    { mode: ViewMode.CREATIVE_FINANCE, label: 'Pembiayaan Kreatif', icon: Target },
-    { mode: ViewMode.GEOSPATIAL, label: 'Geospatial Dashboard', icon: Map },
-    { mode: ViewMode.MARKET, label: 'Pasar Payungi', icon: Store },
-    { mode: ViewMode.PARKING, label: 'Parkir & Mobilitas', icon: Car },
+    { mode: ViewMode.SMART_HUB, label: 'Smart Hub', icon: LayoutGrid },
     { mode: ViewMode.HEALTH, label: 'Kesehatan', icon: HeartPulse },
     { mode: ViewMode.EDUCATION, label: 'Pendidikan', icon: GraduationCap },
     { mode: ViewMode.ENVIRONMENT, label: 'WargaNet', icon: WargaNetIcon },
     { mode: ViewMode.SOCIAL, label: 'Sosial & Laporan', icon: Users },
-    { mode: ViewMode.GAPURA, label: 'Gerbang Pintar', icon: Router },
-    { mode: ViewMode.POSKAMLING, label: 'Keamanan', icon: Siren },
     { mode: ViewMode.SYSTEM, label: 'Kernel System', icon: Cpu },
+    { mode: ViewMode.EVALUATION, label: 'Evaluasi Sistem', icon: Shield },
   ];
 
   const visibleMenuItems = allMenuItems.filter(item => {
@@ -91,7 +85,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isCollapse
                     Warga<span className="text-cyan-400">.</span>
                 </h1>
                 <p className="text-[10px] font-bold text-cyan-400 tracking-[0.25em] uppercase mt-1 leading-none opacity-80">
-                    YOSOMULYO
+                    {activeUser.kelurahan || 'YOSOMULYO'}
                 </p>
             </div>
             

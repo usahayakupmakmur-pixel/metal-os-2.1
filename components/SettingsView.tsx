@@ -3,7 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { kernel, KernelModule } from '../services/kernelService';
 import { Power, Cpu, Shield, RefreshCw, Terminal, Activity, Server } from 'lucide-react';
 
-const SettingsView: React.FC = () => {
+interface SettingsViewProps {
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
+  language: 'en' | 'id';
+  toggleLanguage: () => void;
+}
+
+const SettingsView: React.FC<SettingsViewProps> = ({ theme, toggleTheme, language, toggleLanguage }) => {
   const [modules, setModules] = useState<KernelModule[]>([]);
   const [consoleOutput, setConsoleOutput] = useState<string[]>(['> Kernel interface ready.', '> Waiting for command...']);
   const [uptime, setUptime] = useState(0);
@@ -48,6 +55,15 @@ const SettingsView: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Settings Controls */}
+      <div className="flex gap-4">
+        <button onClick={toggleTheme} className="px-4 py-2 bg-slate-800 text-white rounded-lg">
+          Theme: {theme === 'dark' ? 'Dark' : 'Light'}
+        </button>
+        <button onClick={toggleLanguage} className="px-4 py-2 bg-slate-800 text-white rounded-lg">
+          Language: {language === 'en' ? 'English' : 'Indonesia'}
+        </button>
+      </div>
       {/* Header Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-slate-900 text-white p-6 rounded-xl shadow-lg border border-slate-700">

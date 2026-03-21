@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Table, Presentation, MessageSquare, Video, Search, Plus, MoreVertical, Mic, Camera, PhoneOff, Users, Send, ArrowLeft, ChevronLeft, Share, MessageCircle, Video as VideoIcon, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Sparkles, X, Paperclip, Check, Link, Grid, List, Truck, Phone, Wifi, Loader2, Mail, PenTool, QrCode, ScanBarcode, Calendar as CalendarIcon, ChevronRight, Clock, MapPin, HardDrive, Cloud, Folder, Image as ImageIcon, Music, Film, File, MoreHorizontal, Download, Upload, Trash2, Star, Server, LayoutGrid, Maximize2, Monitor, Inbox, Archive, AlertCircle, Filter, Tag, Paperclip as AttachmentIcon, RefreshCw, Reply, Forward, Minimize2 } from 'lucide-react';
+import { FileText, Table, Presentation, MessageSquare, Video, Search, Plus, MoreVertical, Mic, Camera, PhoneOff, Users, Send, ArrowLeft, ChevronLeft, Share, MessageCircle, Video as VideoIcon, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Sparkles, X, Paperclip, Check, Link, Grid, List, Truck, Phone, Wifi, Loader2, Mail, PenTool, QrCode, ScanBarcode, Calendar as CalendarIcon, ChevronRight, Clock, MapPin, HardDrive, Cloud, Folder, Image as ImageIcon, Music, Film, File, MoreHorizontal, Download, Upload, Trash2, Star, Server, LayoutGrid, Maximize2, Monitor, Inbox, Archive, AlertCircle, Filter, Tag, Paperclip as AttachmentIcon, RefreshCw, Reply, Forward, Minimize2, Globe, ExternalLink, Lock, CreditCard, Activity, Cpu, LogIn } from 'lucide-react';
 import { sendMessageToGemini } from '../services/geminiService';
+import { CitizenProfile } from '../types';
+import GoogleWorkspaceView from './GoogleWorkspaceView';
 
-type AppType = 'DASHBOARD' | 'WORKSPACE' | 'CHAT' | 'MEET' | 'CALENDAR' | 'MAIL';
+type AppType = 'DASHBOARD' | 'WORKSPACE' | 'CHAT' | 'MEET' | 'CALENDAR' | 'MAIL' | 'GOOGLE_WORKSPACE';
 
 interface EOfficeFile {
     id: string;
@@ -18,24 +20,27 @@ interface EOfficeFile {
 }
 
 interface EOfficeViewProps {
+    user?: CitizenProfile;
     onOpenAnjelo: (service?: any, note?: string) => void;
     onContextUpdate?: (context: { title?: string; content?: string; type?: string } | null) => void;
 }
 
 interface SubAppProps {
+    user?: CitizenProfile;
     onOpenFile: (file: EOfficeFile) => void;
     searchQuery: string;
 }
 
-const EOfficeView: React.FC<EOfficeViewProps> = ({ onOpenAnjelo, onContextUpdate }) => {
+const EOfficeView: React.FC<EOfficeViewProps> = ({ user, onOpenAnjelo, onContextUpdate }) => {
   const [activeApp, setActiveApp] = useState<AppType>('WORKSPACE');
   const [activeFile, setActiveFile] = useState<EOfficeFile | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const apps = [
     { id: 'DASHBOARD', label: 'Home', icon: LayoutGrid, color: 'text-slate-600', bg: 'bg-slate-50' },
-    { id: 'MAIL', label: 'Gmail', icon: Mail, color: 'text-red-600', bg: 'bg-red-50' },
-    { id: 'WORKSPACE', label: 'Workspace', icon: HardDrive, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { id: 'MAIL', label: 'Mail', icon: Mail, color: 'text-red-600', bg: 'bg-red-50' },
+    { id: 'WORKSPACE', label: 'Office Suite', icon: HardDrive, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { id: 'GOOGLE_WORKSPACE', label: 'Google Suite', icon: Globe, color: 'text-blue-600', bg: 'bg-blue-50' },
     { id: 'CALENDAR', label: 'Calendar', icon: CalendarIcon, color: 'text-indigo-600', bg: 'bg-indigo-50' },
     { id: 'CHAT', label: 'Chat', icon: MessageSquare, color: 'text-teal-600', bg: 'bg-teal-50' },
     { id: 'MEET', label: 'Meet', icon: Video, color: 'text-blue-500', bg: 'bg-blue-50' },
@@ -85,6 +90,8 @@ const EOfficeView: React.FC<EOfficeViewProps> = ({ onOpenAnjelo, onContextUpdate
         return <ChatApp onOpenFile={handleOpenFile} searchQuery={searchQuery} />;
       case 'MEET':
         return <MeetApp onOpenFile={handleOpenFile} searchQuery={searchQuery} />;
+      case 'GOOGLE_WORKSPACE':
+        return <GoogleWorkspaceApp onOpenFile={handleOpenFile} searchQuery={searchQuery} />;
       default:
         return <DashboardApp onOpenFile={handleOpenFile} onSwitchApp={setActiveApp} />;
     }
@@ -96,10 +103,10 @@ const EOfficeView: React.FC<EOfficeViewProps> = ({ onOpenAnjelo, onContextUpdate
       {!activeFile && (
         <div className="hidden md:flex w-64 bg-slate-50 border-r border-slate-200 flex-col">
             <div className="p-6 border-b border-slate-200">
-            <h2 className="font-black text-slate-800 flex items-center gap-3 text-xl tracking-tighter">
-                <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg shadow-slate-200">WS</div>
-                Workspace
-            </h2>
+              <h2 className="font-black text-slate-800 flex items-center gap-3 text-xl tracking-tighter mb-6">
+                  <div className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-lg shadow-slate-200">WS</div>
+                  Office Suite
+              </h2>
             </div>
             <nav className="flex-1 p-3 space-y-1 overflow-y-auto no-scrollbar">
             {apps.map((app, idx) => (
@@ -137,6 +144,7 @@ const EOfficeView: React.FC<EOfficeViewProps> = ({ onOpenAnjelo, onContextUpdate
 
       {/* Mobile Bottom Nav - Enhanced Highlighting & Animation */}
       {!activeFile && (
+        <>
           <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/85 backdrop-blur-xl border-t border-slate-200 z-[60] flex justify-around items-end px-2 pb-5 pt-2 safe-area-bottom shadow-[0_-8px_30px_-10px_rgba(0,0,0,0.1)] h-[85px] overflow-x-auto no-scrollbar">
             {apps.map((app) => {
                 const isActive = activeApp === app.id;
@@ -169,6 +177,7 @@ const EOfficeView: React.FC<EOfficeViewProps> = ({ onOpenAnjelo, onContextUpdate
                 );
             })}
         </div>
+      </>
       )}
 
       {/* Main Content Area */}
@@ -181,7 +190,7 @@ const EOfficeView: React.FC<EOfficeViewProps> = ({ onOpenAnjelo, onContextUpdate
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 group-focus-within:text-blue-600 transition-colors" />
                     <input 
                         type="text" 
-                        placeholder={`Search in ${activeApp === 'MAIL' ? 'Gmail' : 'Workspace'}...`}
+                        placeholder={`Search in ${activeApp === 'MAIL' ? 'Gmail' : 'Office Suite'}...`}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-slate-100 border-2 border-transparent rounded-2xl pl-12 pr-4 py-3 text-sm font-medium focus:ring-0 focus:border-blue-500 focus:bg-white outline-none transition-all placeholder-slate-400 shadow-inner"
@@ -553,7 +562,7 @@ const WorkspaceApp: React.FC<SubAppProps> = ({ onOpenFile, searchQuery }) => {
                 {/* Toolbar */}
                 <div className="h-14 border-b border-slate-100 flex items-center justify-between px-6">
                     <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <span className="font-bold text-slate-700 hover:underline cursor-pointer">Workspace</span>
+                        <span className="font-bold text-slate-700 hover:underline cursor-pointer">Office Suite</span>
                         <ChevronRight size={14} />
                         <span className="hover:underline cursor-pointer">
                             {activeSection === 'MY_DRIVE' ? 'Drive Saya' : 
@@ -782,6 +791,16 @@ const DashboardApp: React.FC<{ onOpenFile: (file: EOfficeFile) => void; onSwitch
                         <motion.button 
                             whileHover={{ scale: 1.05, y: -2 }}
                             whileTap={{ scale: 0.95 }}
+                            onClick={() => onSwitchApp('GOOGLE_WORKSPACE')} 
+                            className="p-4 bg-white rounded-2xl shadow-lg shadow-blue-100 border border-slate-100 text-slate-600 hover:text-blue-600 transition-colors relative group overflow-hidden"
+                        >
+                            <div className="absolute inset-0 bg-blue-50 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                            <Globe size={24} className="relative z-10" />
+                            <span className="absolute top-3 right-3 w-3 h-3 bg-blue-500 rounded-full border-2 border-white z-20"></span>
+                        </motion.button>
+                        <motion.button 
+                            whileHover={{ scale: 1.05, y: -2 }}
+                            whileTap={{ scale: 0.95 }}
                             onClick={() => onSwitchApp('MAIL')} 
                             className="p-4 bg-white rounded-2xl shadow-lg shadow-red-100 border border-slate-100 text-slate-600 hover:text-red-600 transition-colors relative group overflow-hidden"
                         >
@@ -969,14 +988,44 @@ const DashboardApp: React.FC<{ onOpenFile: (file: EOfficeFile) => void; onSwitch
                                 <motion.button 
                                     whileHover={{ scale: 1.05, y: -4 }}
                                     whileTap={{ scale: 0.95 }}
-                                    onClick={() => onSwitchApp('WORKSPACE')} 
+                                    onClick={() => onSwitchApp('GOOGLE_WORKSPACE')} 
                                     className="p-5 bg-white/10 backdrop-blur-md rounded-2xl hover:bg-white/20 transition-all flex flex-col items-center gap-3 border border-white/10"
                                 >
-                                    <div className="p-3 bg-green-500/20 rounded-xl">
-                                        <Plus size={24} className="text-green-400" />
+                                    <div className="p-3 bg-amber-500/20 rounded-xl">
+                                        <Globe size={24} className="text-amber-400" />
                                     </div>
-                                    <span className="text-xs font-black tracking-tight">File Baru</span>
+                                    <span className="text-xs font-black tracking-tight">Google Apps</span>
                                 </motion.button>
+                            </div>
+                        </motion.div>
+
+                        {/* Ecosystem Integration */}
+                        <motion.div 
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.9 }}
+                            className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-blue-400/30 relative overflow-hidden group"
+                        >
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                            <h3 className="font-black uppercase text-[11px] tracking-[0.4em] opacity-60 mb-6 relative z-10">Ecosystem Modules</h3>
+                            <div className="grid grid-cols-3 gap-3 relative z-10">
+                                {[
+                                    { label: 'Tasks', icon: Check, bg: 'bg-white/10' },
+                                    { label: 'Assets', icon: HardDrive, bg: 'bg-white/10' },
+                                    { label: 'Tracker', icon: Clock, bg: 'bg-white/10' },
+                                    { label: 'Economy', icon: CreditCard, bg: 'bg-white/10' },
+                                    { label: 'Health', icon: Activity, bg: 'bg-white/10' },
+                                    { label: 'System', icon: Cpu, bg: 'bg-white/10' },
+                                ].map((mod, i) => (
+                                    <motion.div 
+                                        key={i}
+                                        whileHover={{ scale: 1.05, backgroundColor: 'rgba(255,255,255,0.2)' }}
+                                        className={`${mod.bg} p-3 rounded-2xl flex flex-col items-center gap-2 cursor-pointer transition-all border border-white/5`}
+                                    >
+                                        <mod.icon size={18} />
+                                        <span className="text-[10px] font-black uppercase tracking-tighter">{mod.label}</span>
+                                    </motion.div>
+                                ))}
                             </div>
                         </motion.div>
                     </motion.div>
@@ -1471,7 +1520,7 @@ const CalendarApp: React.FC<SubAppProps> = ({ onOpenFile, searchQuery }) => {
                 <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
                     <div className="text-center font-bold text-sm mb-2 text-slate-800">{currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}</div>
                     <div className="grid grid-cols-7 gap-1 text-center text-[10px] text-slate-400">
-                        {['S','M','T','W','T','F','S'].map(d => <div key={d}>{d}</div>)}
+                        {['S','M','T','W','T','F','S'].map((d, i) => <div key={`${d}-${i}`}>{d}</div>)}
                         {Array.from({length: 30}, (_, i) => (
                             <div key={i} className={`p-1 rounded-full ${i+1 === new Date().getDate() ? 'bg-indigo-600 text-white' : 'hover:bg-slate-100'}`}>{i+1}</div>
                         ))}
@@ -2114,6 +2163,14 @@ const MeetApp: React.FC<SubAppProps> = ({ onOpenFile, searchQuery }) => {
                      ))}
                  </div>
             </div>
+        </div>
+    );
+};
+
+const GoogleWorkspaceApp: React.FC<SubAppProps> = ({ onOpenFile, searchQuery }) => {
+    return (
+        <div className="flex-1 flex flex-col bg-slate-50 h-full overflow-hidden">
+            <GoogleWorkspaceView />
         </div>
     );
 };

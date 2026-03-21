@@ -1,8 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
-import DashboardView from './components/DashboardView';
-import GovernanceView from './components/GovernanceView';
+import HomeView from './components/HomeView';
 import EconomyView from './components/EconomyView';
 import EnvironmentView from './components/EnvironmentView';
 import GapuraView from './components/GapuraView';
@@ -19,20 +18,23 @@ import BerdayaView from './components/BerdayaView';
 import AnjeloSystem from './components/AnjeloSystem';
 import EducationView from './components/EducationView';
 import SystemView from './components/SystemView';
-import CreativeFinanceView from './components/CreativeFinanceView';
-import GeospatialView from './components/GeospatialView';
 import CommandCenter from './components/CommandCenter';
+import IoTView from './components/IoTView';
+import ProfileView from './components/ProfileView';
+import ProfileWargaDashboard from './components/ProfileWargaDashboard';
+import SmartHubView from './components/SmartHubView';
+import SystemEvaluationView from './components/SystemEvaluationView';
+import GoogleWorkspaceView from './components/GoogleWorkspaceView';
+import OssIntegrationView from './components/OssIntegrationView';
 import ScannerOverlay from './components/ScannerOverlay';
 import BottomNav from './components/BottomNav';
-import TasksView from './src/TasksView';
-import AssetsView from './src/AssetsView';
-import TrackerView from './src/TrackerView';
+import GovernanceDashboard from './components/GovernanceDashboard';
 import { ViewMode, CitizenProfile } from './types';
-import { Bell, Search, Menu, ChevronDown, Check, Loader2, RefreshCw, Home, ShoppingBag, QrCode, Users, User, Sparkles, Wifi, Trash2, Phone, Activity, Camera, Upload, X, Cpu, Shield, Zap, Command, BellRing, Clock, Battery, Signal, Plus, Truck, ArrowLeft, LogIn, LogOut } from 'lucide-react';
+import { Bell, Search, Menu, ChevronDown, Check, Loader2, RefreshCw, Home, ShoppingBag, QrCode, Users, User, Sparkles, Wifi, Trash2, Phone, Activity, Camera, Upload, X, Cpu, Shield, Zap, Command, BellRing, Clock, Battery, Signal, Plus, Truck, ArrowLeft, LogIn, LogOut, Map, Globe, Fingerprint } from 'lucide-react';
 import { MOCK_USER, AVAILABLE_USERS } from './constants';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, googleProvider, signInWithPopup, onAuthStateChanged, db } from './firebase';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, googleProvider, signInWithPopup, onAuthStateChanged, db, handleFirestoreError, OperationType } from './firebase';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore';
 
 const App: React.FC = () => {
     const [isBooting, setIsBooting] = useState(true);
@@ -43,7 +45,38 @@ const App: React.FC = () => {
     const [viewHistory, setViewHistory] = useState<ViewMode[]>([]);
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); 
+    const [isBottomNavVisible, setIsBottomNavVisible] = useState(true);
+    const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+    const lastScrollY = useRef(0);
 
+    // Layout Synchronization & Responsive Detection
+    useEffect(() => {
+        const handleResize = () => {
+            setWindowWidth(window.innerWidth);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
+    const isMobile = windowWidth < 768;
+    const isTablet = windowWidth >= 768 && windowWidth < 1024;
+    const isDesktop = windowWidth >= 1024;
+
+    // Auto-hide bottom nav on scroll
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+                setIsBottomNavVisible(false);
+            } else {
+                setIsBottomNavVisible(true);
+            }
+            lastScrollY.current = currentScrollY;
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
     // Context Aware User State
     const [currentUser, setCurrentUser] = useState<CitizenProfile>(AVAILABLE_USERS[0]); 
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -74,8 +107,36 @@ const App: React.FC = () => {
             if (user) {
                 // Sync user profile to Firestore
                 const userRef = doc(db, 'users', user.uid);
-                const userDoc = await getDoc(userRef);
+                
+                // Set up real-time listener for user profile
+                const unsubProfile = onSnapshot(userRef, (docSnap) => {
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        const matchedMockUser = AVAILABLE_USERS.find(u => u.role === data.role) || AVAILABLE_USERS[0];
+                        setCurrentUser({
+                            ...matchedMockUser,
+                            id: user.uid,
+                            name: data.displayName || user.displayName || matchedMockUser.name,
+                            photoUrl: data.photoURL || user.photoURL || matchedMockUser.photoUrl,
+                            role: data.role || matchedMockUser.role,
+                            balance: data.balance ?? matchedMockUser.balance,
+                            points: data.points ?? matchedMockUser.points,
+                            wargaScore: data.wargaScore ?? matchedMockUser.wargaScore,
+                            nik: data.nik || matchedMockUser.nik,
+                            nib: data.nib,
+                            nip: data.nip,
+                            nim: data.nim,
+                            nis: data.nis,
+                            kip: data.kip,
+                            kis: data.kis,
+                            ossId: data.ossId,
+                            isOssLinked: data.isOssLinked,
+                            ssoProvider: data.ssoProvider || 'GOOGLE'
+                        });
+                    }
+                });
 
+                const userDoc = await getDoc(userRef);
                 if (!userDoc.exists()) {
                     // Create initial profile if it doesn't exist
                     const isDefaultAdmin = user.email === 'usahayakupmakmur@gmail.com';
@@ -93,18 +154,9 @@ const App: React.FC = () => {
                 } else {
                     // Update last seen
                     await setDoc(userRef, { lastSeen: serverTimestamp() }, { merge: true });
-                    
-                    // Sync local currentUser state with Firestore role
-                    const data = userDoc.data();
-                    const matchedMockUser = AVAILABLE_USERS.find(u => u.role === data.role) || AVAILABLE_USERS[0];
-                    setCurrentUser({
-                        ...matchedMockUser,
-                        id: user.uid,
-                        name: data.displayName || user.displayName || matchedMockUser.name,
-                        photoUrl: data.photoURL || user.photoURL || matchedMockUser.photoUrl,
-                        role: data.role || matchedMockUser.role
-                    });
                 }
+                
+                return () => unsubProfile();
             }
         });
 
@@ -138,7 +190,6 @@ const App: React.FC = () => {
 
     // Scroll tracking for mobile Home button auto-hide
     const [isHomeButtonVisible, setIsHomeButtonVisible] = useState(true);
-    const lastScrollY = useRef(0);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -155,6 +206,20 @@ const App: React.FC = () => {
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    // Theme and Language State
+    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+    const [language, setLanguage] = useState<'en' | 'id'>('id');
+
+    const toggleTheme = () => {
+        const newTheme = theme === 'light' ? 'dark' : 'light';
+        setTheme(newTheme);
+        document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    };
+
+    const toggleLanguage = () => {
+        setLanguage(prev => prev === 'en' ? 'id' : 'en');
+    };
 
     // TV Mode State 
     const [isTvMode, setIsTvMode] = useState(false);
@@ -298,6 +363,9 @@ const App: React.FC = () => {
             addNotification(`Lokasi #${locationId} terverifikasi. Membuka check-in...`, 'info');
             handleNavigate(ViewMode.POSKAMLING);
             setPendingCheckInLocation(locationId);
+        } else if (decodedText.startsWith('PKR-')) {
+            addNotification(`Tiket Parkir Terdeteksi. Membuka Modul Parkir...`, 'info');
+            handleNavigate(ViewMode.PARKING);
         } else {
             // Default: Show result in AI Assistant
             setAiContext({
@@ -331,7 +399,7 @@ const App: React.FC = () => {
                         <Shield className="text-white w-10 h-10" />
                     </div>
                     
-                    <h1 className="text-3xl font-black text-white mb-2 tracking-tight">Warga.Yosomulyo</h1>
+                    <h1 className="text-3xl font-black text-white mb-2 tracking-tight">Warga.{MOCK_USER.kelurahan || 'Yosomulyo'}</h1>
                     <p className="text-slate-400 text-sm mb-10 leading-relaxed">Sistem Operasi Kognitif untuk Tata Kelola Desa Masa Depan. Silakan masuk untuk melanjutkan.</p>
 
                     <button 
@@ -348,7 +416,7 @@ const App: React.FC = () => {
                     </button>
 
                     <div className="mt-8 pt-8 border-t border-white/5">
-                        <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em]">Powered by Gemini Neural Engine</p>
+                        <p className="text-[10px] text-slate-500 uppercase tracking-[0.3em]">powered by semesta</p>
                     </div>
                 </motion.div>
             </div>
@@ -389,31 +457,82 @@ const App: React.FC = () => {
                 >
                     {(() => {
                         switch (currentView) {
-                            case ViewMode.DASHBOARD: return <DashboardView user={currentUser} onViewChange={handleNavigate} onOpenAiAssistant={() => setIsAiChatOpen(true)} />;
-                            case ViewMode.GOVERNANCE: return <GovernanceView />;
-                            case ViewMode.EOFFICE: return <EOfficeView onOpenAnjelo={triggerAnjelo} onContextUpdate={setAiContext} />;
-                            case ViewMode.TASKS: return <TasksView onOpenScanner={() => setIsScannerOpen(true)} pendingTaskId={pendingTaskId} />;
-                            case ViewMode.ASSETS: return <AssetsView onOpenScanner={() => setIsScannerOpen(true)} pendingAssetId={pendingAssetId} />;
-                            case ViewMode.TRACKER: return <TrackerView onOpenScanner={() => setIsScannerOpen(true)} />;
+                            case ViewMode.DASHBOARD: return <HomeView user={currentUser} onViewChange={handleNavigate} onOpenAiAssistant={() => setIsAiChatOpen(true)} />;
+                            case ViewMode.GOVERNANCE: return <GovernanceDashboard 
+                                user={currentUser} 
+                                onOpenScanner={() => setIsScannerOpen(true)} 
+                                pendingTaskId={pendingTaskId} 
+                                pendingAssetId={pendingAssetId} 
+                            />;
+                            case ViewMode.OFFICE_SUITE:
+                                return <EOfficeView user={currentUser} onOpenAnjelo={triggerAnjelo} onContextUpdate={setAiContext} />;
+                            case ViewMode.TASKS: return <GovernanceDashboard 
+                                user={currentUser} 
+                                onOpenScanner={() => setIsScannerOpen(true)} 
+                                pendingTaskId={pendingTaskId} 
+                                initialSubView="TASKS"
+                            />;
+                            case ViewMode.ASSETS: return <GovernanceDashboard 
+                                user={currentUser} 
+                                onOpenScanner={() => setIsScannerOpen(true)} 
+                                pendingAssetId={pendingAssetId} 
+                                initialSubView="ASSETS"
+                            />;
+                            case ViewMode.TRACKER: return <GovernanceDashboard 
+                                user={currentUser} 
+                                onOpenScanner={() => setIsScannerOpen(true)} 
+                                initialSubView="TRACKER"
+                            />;
+                            case ViewMode.GEOSPATIAL: return <GovernanceDashboard 
+                                user={currentUser} 
+                                onOpenScanner={() => setIsScannerOpen(true)} 
+                                initialSubView="GEOSPATIAL"
+                            />;
+                            case ViewMode.CREATIVE_FINANCE: return <GovernanceDashboard 
+                                user={currentUser} 
+                                onOpenScanner={() => setIsScannerOpen(true)} 
+                                initialSubView="FINANCE"
+                            />;
                             case ViewMode.ECONOMY: return <EconomyView user={currentUser} onOpenAnjelo={triggerAnjelo} onOpenAiAssistant={() => setIsAiChatOpen(true)} onOpenScanner={() => setIsScannerOpen(true)} />;
                             case ViewMode.BERDAYA: return <BerdayaView user={currentUser} onOpenAnjelo={triggerAnjelo} />;
-                            case ViewMode.MARKET: return <MarketView user={currentUser} onOpenScanner={() => setIsScannerOpen(true)} />;
-                            case ViewMode.PARKING: return <ParkingView user={currentUser} />;
                             case ViewMode.HEALTH: return <HealthView user={currentUser} />;
                             case ViewMode.ENVIRONMENT: return <EnvironmentView user={currentUser} onOpenAnjelo={triggerAnjelo} onOpenAiAssistant={() => setIsAiChatOpen(true)} />;
                             case ViewMode.SOCIAL: return <SocialView 
+                                user={currentUser}
                                 onOpenAiAssistant={() => setIsAiChatOpen(true)} 
                                 onOpenScanner={() => setIsScannerOpen(true)} 
                                 pendingUserId={pendingUserId} 
                                 addNotification={(message, type) => addNotification(message, type as any)}
                             />;
-                            case ViewMode.GAPURA: return <GapuraView user={currentUser} isTvMode={isTvMode} onToggleTvMode={setIsTvMode} />;
-                            case ViewMode.POSKAMLING: return <PosKamlingView user={currentUser} onOpenScanner={() => setIsScannerOpen(true)} pendingCheckInLocation={pendingCheckInLocation} />;
                             case ViewMode.EDUCATION: return <EducationView user={currentUser} />;
                             case ViewMode.SYSTEM: return <SystemView />;
-                            case ViewMode.CREATIVE_FINANCE: return <CreativeFinanceView />;
-                            case ViewMode.GEOSPATIAL: return <GeospatialView />;
-                            case ViewMode.SETTINGS: return <SettingsView />;
+                            case ViewMode.GAPURA:
+                            case ViewMode.IOT:
+                            case ViewMode.POSKAMLING:
+                            case ViewMode.PARKING:
+                            case ViewMode.SMART_HUB:
+                                return <SmartHubView 
+                                    user={currentUser} 
+                                    isTvMode={isTvMode} 
+                                    onToggleTvMode={setIsTvMode} 
+                                    onOpenScanner={() => setIsScannerOpen(true)}
+                                    pendingCheckInLocation={pendingCheckInLocation}
+                                />;
+                            case ViewMode.PROFILE:
+                            case ViewMode.OSS:
+                                return <ProfileWargaDashboard user={currentUser} onUpdate={async (updates) => {
+                                    setCurrentUser(prev => ({ ...prev, ...updates }));
+                                    if (auth.currentUser) {
+                                        try {
+                                            await updateDoc(doc(db, 'users', auth.currentUser.uid), updates);
+                                            addNotification('Profil berhasil diperbarui', 'success');
+                                        } catch (error) {
+                                            handleFirestoreError(error, OperationType.UPDATE, `users/${auth.currentUser.uid}`);
+                                        }
+                                    }
+                                }} />;
+                            case ViewMode.EVALUATION: return <SystemEvaluationView />;
+                            case ViewMode.SETTINGS: return <SettingsView theme={theme} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} />;
                             default: return <div className="flex items-center justify-center h-96 text-white/50">Modul dalam pengembangan</div>;
                         }
                     })()}
@@ -468,45 +587,47 @@ const App: React.FC = () => {
             {/* Main Content Area */}
             <main
                 className={`relative z-10 min-h-screen transition-all duration-500 ease-[cubic-bezier(0.25,0.8,0.25,1)] flex flex-col 
-                ${isSidebarCollapsed || isTvMode ? 'md:ml-[114px]' : 'md:ml-[304px]'} 
-                pb-28 md:pb-6 md:pr-6 pt-4`}
+                ${isDesktop ? (isSidebarCollapsed || isTvMode ? 'ml-[114px]' : 'ml-[304px]') : 'ml-0'} 
+                ${isTablet ? 'ml-[114px]' : ''}
+                pb-28 md:pb-6 md:pr-6 pt-4 px-2 md:px-0`}
             >
                 {/* Floating Header */}
-                <header className={`sticky top-0 z-30 mx-2 md:mx-0 mb-6 transition-all duration-500 ${isTvMode ? '-translate-y-40 opacity-0' : 'translate-y-0 opacity-100'}`}>
-                    <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-lg rounded-[2rem] px-6 py-3 flex justify-between items-center">
+                <header className={`sticky top-0 z-30 mb-6 transition-all duration-500 ${isTvMode ? '-translate-y-40 opacity-0' : 'translate-y-0 opacity-100'}`}>
+                    <div className="bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-lg rounded-[2rem] px-4 md:px-6 py-3 flex justify-between items-center mx-2 md:mx-0">
                         
                         {/* Mobile Menu Toggle & Title */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2 md:gap-4">
                             <button onClick={() => setIsCommandCenterOpen(true)} className="hidden md:flex p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all group relative">
                                 <Search className="w-5 h-5" />
                                 <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-800 text-[10px] text-white rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none border border-white/10">
                                     Search (Ctrl+K)
                                 </div>
                             </button>
-                            <button onClick={handleBack} className={`md:hidden p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all ${viewHistory.length === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                            <button onClick={handleBack} className={`p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-xl transition-all ${viewHistory.length === 0 ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
                                 <ArrowLeft className="w-5 h-5" />
                             </button>
-                            <div>
-                                <h2 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                                    <span className="md:hidden text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 font-black">Warga.Yosomulyo</span>
+                            <div className="flex flex-col">
+                                <h2 className="text-sm md:text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                                    <span className="md:hidden text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 font-black truncate max-w-[120px]">Warga.{currentUser.kelurahan || 'Yosomulyo'}</span>
                                     <span className="hidden md:inline text-slate-200">
-                                        {currentView === ViewMode.DASHBOARD && 'Cognitive Dashboard'}
+                                        {currentView === ViewMode.DASHBOARD && 'Home Ecosystem'}
                                         {currentView === ViewMode.GOVERNANCE && 'Tata Kelola'}
-                                        {currentView === ViewMode.EOFFICE && 'Workspace'}
+                                        {currentView === ViewMode.OFFICE_SUITE && 'Office Suite'}
                                         {currentView === ViewMode.TASKS && 'Team Tasks'}
                                         {currentView === ViewMode.ASSETS && 'Asset Management'}
                                         {currentView === ViewMode.TRACKER && 'Operational Tracker'}
                                         {currentView === ViewMode.BERDAYA && 'Warga Berdaya'}
                                         {currentView === ViewMode.ECONOMY && 'Ekonomi'}
-                                        {currentView === ViewMode.MARKET && 'Pasar Payungi'}
-                                        {currentView === ViewMode.PARKING && 'Parkir'}
                                         {currentView === ViewMode.HEALTH && 'Kesehatan'}
                                         {currentView === ViewMode.ENVIRONMENT && 'Lingkungan'}
                                         {currentView === ViewMode.SOCIAL && 'Sosial'}
-                                        {currentView === ViewMode.GAPURA && 'Smart Gateway'}
-                                        {currentView === ViewMode.POSKAMLING && 'Keamanan'}
+                                        {(currentView === ViewMode.GAPURA || currentView === ViewMode.POSKAMLING || currentView === ViewMode.PARKING || currentView === ViewMode.IOT || currentView === ViewMode.SMART_HUB) && 'Smart Hub'}
                                         {currentView === ViewMode.EDUCATION && 'Pendidikan'}
                                         {currentView === ViewMode.SYSTEM && 'Kernel System'}
+                                        {currentView === ViewMode.GEOSPATIAL && 'Geospatial Dashboard'}
+                                        {currentView === ViewMode.IOT && 'IoT & Smart Village'}
+                                        {(currentView === ViewMode.PROFILE || currentView === ViewMode.OSS) && 'Profil Warga'}
+                                        {currentView === ViewMode.EVALUATION && 'Evaluasi Sistem'}
                                         {currentView === ViewMode.SETTINGS && 'Pengaturan'}
                                     </span>
                                 </h2>
@@ -584,6 +705,15 @@ const App: React.FC = () => {
                                             <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*" />
                                             <h3 className="font-bold text-white">{currentUser.name}</h3>
                                             <p className="text-xs text-slate-400">{currentUser.role}</p>
+                                            <button 
+                                                onClick={() => {
+                                                    handleNavigate(ViewMode.PROFILE);
+                                                    setIsUserMenuOpen(false);
+                                                }}
+                                                className="mt-4 px-4 py-1.5 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full text-[10px] font-bold text-white uppercase tracking-widest transition-all"
+                                            >
+                                                Lihat Profil Lengkap
+                                            </button>
                                         </div>
                                         <div className="max-h-48 overflow-y-auto custom-scrollbar">
                                             {AVAILABLE_USERS.map(u => (
@@ -628,8 +758,29 @@ const App: React.FC = () => {
 
             {/* MOBILE BOTTOM NAVIGATION */}
             {!isTvMode && (
-                <BottomNav currentView={currentView} onViewChange={handleNavigate} />
+                <BottomNav 
+                    currentView={currentView} 
+                    onViewChange={handleNavigate} 
+                    isVisible={isBottomNavVisible}
+                />
             )}
+
+            {/* Quick Access Geospatial Button (Mobile) */}
+            <AnimatePresence>
+                {isBottomNavVisible && !isTvMode && currentView !== ViewMode.GEOSPATIAL && (
+                    <motion.button
+                        initial={{ scale: 0, opacity: 0, y: 20 }}
+                        animate={{ scale: 1, opacity: 1, y: 0 }}
+                        exit={{ scale: 0, opacity: 0, y: 20 }}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleNavigate(ViewMode.GEOSPATIAL)}
+                        className="md:hidden fixed bottom-28 left-6 z-[140] w-12 h-12 bg-slate-900/80 backdrop-blur-xl text-cyan-400 rounded-2xl shadow-2xl flex items-center justify-center border border-white/10"
+                    >
+                        <Map size={20} />
+                    </motion.button>
+                )}
+            </AnimatePresence>
 
             {/* Global Anjelo Trigger FAB */}
             <div className="fixed bottom-32 right-6 z-[100] flex flex-col items-end gap-3">
@@ -690,7 +841,16 @@ const App: React.FC = () => {
                 currentView={currentView}
                 onNavigate={handleNavigate}
                 onAnjelo={triggerAnjelo}
-                context={aiContext || undefined}
+                context={aiContext ? {
+                    ...aiContext,
+                    user: currentUser,
+                    systemStatus: 'ONLINE',
+                    location: 'Kota Metro, Lampung'
+                } : {
+                    user: currentUser,
+                    systemStatus: 'ONLINE',
+                    location: 'Kota Metro, Lampung'
+                }}
             />
             <CommandCenter isOpen={isCommandCenterOpen} onClose={() => setIsCommandCenterOpen(false)} onNavigate={handleNavigate} />
 

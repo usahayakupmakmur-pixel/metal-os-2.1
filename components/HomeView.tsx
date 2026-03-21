@@ -2,10 +2,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line } from 'recharts';
-import { Users, TrendingUp, AlertTriangle, Activity, ShieldCheck, Wallet, Facebook, Instagram, Youtube, MessageCircle, ArrowRight, Truck, Mail, FileSignature, Inbox, ShoppingBag, Utensils, Stethoscope, Zap, Trash2, MoreHorizontal, QrCode, ScanLine, Send, PlusCircle, Calendar, CloudSun, X, Camera, CheckCircle, RefreshCw, Building2, ThumbsUp, AlertCircle, FileText, MessageSquare, Wrench, Armchair, Car, BookOpen, Briefcase, GraduationCap, Siren, Percent, Leaf, Wifi, Phone, BellRing, Map as MapIcon, Package, Sparkles, Database } from 'lucide-react';
+import { Users, TrendingUp, AlertTriangle, Activity, ShieldCheck, Wallet, Facebook, Instagram, Youtube, MessageCircle, ArrowRight, Truck, Mail, FileSignature, Inbox, ShoppingBag, Utensils, Stethoscope, Zap, Trash2, MoreHorizontal, QrCode, ScanLine, Send, PlusCircle, Calendar, CloudSun, X, Camera, CheckCircle, RefreshCw, Building2, ThumbsUp, AlertCircle, FileText, MessageSquare, Wrench, Armchair, Car, BookOpen, Briefcase, GraduationCap, Siren, Percent, Leaf, Wifi, Phone, BellRing, Map as MapIcon, Package, Sparkles, Database, Battery, Plus, LayoutGrid, HardDrive, Contact } from 'lucide-react';
 import { STUNTING_DATA, BUDGET_DATA, MOCK_USER, EOFFICE_SUMMARY, SOCIAL_REPORTS, MARKETPLACE_ITEMS, PARKING_ZONES, TEAM_TASKS, ASSETS } from '../constants';
 import { CitizenProfile, ViewMode, TeamTask, Asset, BudgetLineItem } from '../types';
 import GeospatialEngine from './GeospatialEngine';
+import GlassCard from '../src/components/GlassCard';
 import { db, auth, handleFirestoreError, OperationType } from '../firebase';
 import { collection, onSnapshot, query, orderBy, limit, doc, setDoc, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
 
@@ -17,20 +18,69 @@ interface DashboardViewProps {
 }
 
 
-const GlassCard: React.FC<{ children: React.ReactNode, className?: string, onClick?: () => void, delay?: number }> = ({ children, className, onClick, delay = 0 }) => (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay }}
-      onClick={onClick} 
-      className={`glass-panel rounded-[2rem] p-6 relative overflow-hidden group transition-all duration-500 hover:scale-[1.01] hover:shadow-2xl hover:shadow-cyan-500/10 hover:border-white/30 border border-white/10 ${className || ''}`}
-    >
-        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"></div>
-        {children}
-    </motion.div>
-);
+const QuickActions: React.FC<{ onViewChange?: (view: ViewMode) => void }> = ({ onViewChange }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    const actions = [
+        { label: 'Bayar QRIS', icon: QrCode, color: 'from-cyan-500 to-blue-600', view: ViewMode.ECONOMY },
+        { label: 'Lapor Warga', icon: MessageSquare, color: 'from-rose-500 to-pink-600', view: ViewMode.SOCIAL },
+        { label: 'Kirim Pesan', icon: Send, color: 'from-indigo-500 to-purple-600', view: ViewMode.OFFICE_SUITE },
+        { label: 'Panggil Anjelo', icon: Truck, color: 'from-emerald-500 to-teal-600', view: ViewMode.BERDAYA },
+    ];
 
-const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewChange, onOpenAiAssistant, isGlassHouseMode = false }) => {
+    return (
+        <div className="fixed bottom-24 right-6 z-50 md:hidden">
+            <AnimatePresence>
+                {isOpen && (
+                    <>
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setIsOpen(false)}
+                            className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-[-1]"
+                        />
+                        <div className="absolute bottom-20 right-0 flex flex-col gap-4 items-end">
+                            {actions.map((action, i) => (
+                                <motion.button
+                                    key={i}
+                                    initial={{ opacity: 0, scale: 0.5, y: 20, x: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+                                    exit={{ opacity: 0, scale: 0.5, y: 20, x: 20 }}
+                                    transition={{ delay: i * 0.05, type: 'spring', stiffness: 400, damping: 25 }}
+                                    onClick={() => {
+                                        onViewChange?.(action.view);
+                                        setIsOpen(false);
+                                    }}
+                                    className="flex items-center gap-3 group"
+                                >
+                                    <span className="bg-white/10 backdrop-blur-xl border border-white/20 px-4 py-2 rounded-2xl text-[10px] font-black text-white uppercase tracking-widest shadow-2xl">
+                                        {action.label}
+                                    </span>
+                                    <div className={`w-14 h-14 bg-gradient-to-br ${action.color} rounded-2xl flex items-center justify-center shadow-2xl shadow-black/50 border border-white/20 relative overflow-hidden`}>
+                                        <div className="absolute inset-0 bg-white/20 opacity-0 group-active:opacity-100 transition-opacity" />
+                                        <action.icon size={24} className="text-white relative z-10" />
+                                    </div>
+                                </motion.button>
+                            ))}
+                        </div>
+                    </>
+                )}
+            </AnimatePresence>
+            
+            <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-16 h-16 rounded-[2rem] flex items-center justify-center shadow-2xl transition-all duration-500 border border-white/20 relative overflow-hidden ${isOpen ? 'bg-rose-500 rotate-45' : 'bg-gradient-to-tr from-cyan-500 to-blue-600'}`}
+            >
+                <div className="absolute inset-0 bg-white/20 opacity-0 active:opacity-100 transition-opacity" />
+                {isOpen ? <X size={32} className="text-white relative z-10" /> : <Plus size={32} className="text-white relative z-10" />}
+            </motion.button>
+        </div>
+    );
+};
+
+const HomeView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewChange, onOpenAiAssistant, isGlassHouseMode = false }) => {
   const isAdmin = user.role === 'Lurah / Admin';
 
   // Dashboard Data State
@@ -47,6 +97,12 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
   });
   const [eofficeSummary, setEofficeSummary] = useState(EOFFICE_SUMMARY);
   const [isSeeding, setIsSeeding] = useState(false);
+  const [workspaceStatus, setWorkspaceStatus] = useState({
+    gmail: 'Checking...',
+    calendar: 'Checking...',
+    drive: 'Checking...',
+    contacts: 'Checking...'
+  });
 
   // Scanner State
   const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -67,10 +123,10 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
       setAssets(data.length > 0 ? data : ASSETS);
     }, (error) => handleFirestoreError(error, OperationType.GET, 'assets'));
 
-    const unsubBudget = onSnapshot(collection(db, 'budget'), (snapshot) => {
+    const unsubBudget = onSnapshot(collection(db, 'budget_data'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BudgetLineItem));
       setBudgetData(data.length > 0 ? data : BUDGET_DATA);
-    }, (error) => handleFirestoreError(error, OperationType.GET, 'budget'));
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'budget_data'));
 
     const unsubStunting = onSnapshot(collection(db, 'stunting'), (snapshot) => {
       const data = snapshot.docs.map(doc => doc.data());
@@ -95,6 +151,37 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
     const unsubEoffice = onSnapshot(doc(db, 'stats', 'eoffice'), (doc) => {
       if (doc.exists()) setEofficeSummary(doc.data() as any);
     }, (error) => handleFirestoreError(error, OperationType.GET, 'stats/eoffice'));
+
+    // Check Google Workspace Status
+    const checkWorkspace = async () => {
+        try {
+            const endpoints = [
+                { key: 'gmail', url: '/api/google/gmail' },
+                { key: 'calendar', url: '/api/google/calendar' },
+                { key: 'drive', url: '/api/google/drive' },
+                { key: 'contacts', url: '/api/google/contacts' }
+            ];
+
+            const results = await Promise.all(endpoints.map(async (ep) => {
+                try {
+                    const res = await fetch(ep.url);
+                    return { key: ep.key, status: res.ok ? 'Connected' : 'Error' };
+                } catch {
+                    return { key: ep.key, status: 'Offline' };
+                }
+            }));
+
+            const newStatus = { ...workspaceStatus };
+            results.forEach(r => {
+                (newStatus as any)[r.key] = r.status;
+            });
+            setWorkspaceStatus(newStatus);
+        } catch (error) {
+            console.error('Workspace check error:', error);
+        }
+    };
+
+    checkWorkspace();
 
     return () => {
       unsubTasks();
@@ -128,7 +215,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
 
       // Seed Budget
       BUDGET_DATA.forEach(item => {
-        const ref = doc(collection(db, 'budget'), item.id);
+        const ref = doc(collection(db, 'budget_data'), item.id);
         batch.set(ref, item);
       });
 
@@ -192,21 +279,20 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
   };
 
   const berdayaMenu = [
-      { label: 'Pesan Meja', icon: Armchair, color: 'from-blue-600 to-blue-400', view: ViewMode.MARKET },
+      { label: 'Pesan Meja', icon: Armchair, color: 'from-blue-600 to-blue-400', view: ViewMode.SMART_HUB },
       { label: 'Tracker', icon: Activity, color: 'from-cyan-600 to-blue-500', view: ViewMode.TRACKER },
       { label: 'Tugas Tim', icon: CheckCircle, color: 'from-emerald-600 to-teal-500', view: ViewMode.TASKS },
       { label: 'Aset Desa', icon: Package, color: 'from-blue-600 to-indigo-500', view: ViewMode.ASSETS },
       { label: 'Belanja', icon: ShoppingBag, color: 'from-orange-500 to-amber-500', view: ViewMode.BERDAYA }, 
       { label: 'Anjelo', icon: Truck, color: 'from-green-600 to-emerald-500', view: ViewMode.BERDAYA }, 
-      { label: 'Parkir', icon: Car, color: 'from-indigo-500 to-violet-500', view: ViewMode.PARKING },
-      { label: 'Workspace', icon: Briefcase, color: 'from-slate-700 to-slate-500', view: ViewMode.EOFFICE }, 
+      { label: 'Smart Hub', icon: LayoutGrid, color: 'from-indigo-500 to-violet-500', view: ViewMode.SMART_HUB },
+      { label: 'Office Suite', icon: Briefcase, color: 'from-slate-700 to-slate-500', view: ViewMode.OFFICE_SUITE }, 
       { label: 'Pustaka', icon: BookOpen, color: 'from-violet-600 to-fuchsia-600', view: ViewMode.EDUCATION, noQuota: true },
       { label: 'Kursus', icon: GraduationCap, color: 'from-pink-600 to-rose-500', view: ViewMode.EDUCATION, noQuota: true }, 
-      { label: 'Poskamling', icon: Siren, color: 'from-red-600 to-orange-600', view: ViewMode.POSKAMLING },
       { label: 'Sehat', icon: Stethoscope, color: 'from-teal-500 to-cyan-500', view: ViewMode.HEALTH },
       { label: 'WargaNet', icon: Activity, color: 'from-cyan-600 to-blue-500', view: ViewMode.ENVIRONMENT },
+      { label: 'Evaluasi', icon: ShieldCheck, color: 'from-cyan-600 to-blue-600', view: ViewMode.EVALUATION },
       { label: 'Lapor', icon: AlertTriangle, color: 'from-red-500 to-pink-600', view: ViewMode.SOCIAL },
-      { label: 'Lainnya', icon: MoreHorizontal, color: 'from-slate-800 to-slate-600', view: ViewMode.GAPURA },
   ];
 
   if (isGlassHouseMode) {
@@ -230,119 +316,252 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
 
   return (
     <div className="space-y-8 pb-32 md:pb-8 relative">
+      <QuickActions onViewChange={onViewChange} />
       
       {/* MOBILE DASHBOARD */}
-      <div className="md:hidden flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex justify-between items-end px-2">
-              <div>
-                  <p className="text-slate-400 text-xs font-medium mb-0.5">Selamat Pagi,</p>
-                  <h1 className="text-3xl font-black text-white tracking-tight">{user.name.split(' ')[0]}!</h1>
+      <div className="md:hidden flex flex-col gap-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          {/* Top Status Bar - Ultra Tech Feel */}
+          <div className="flex justify-between items-center px-6 pt-6">
+              <div className="flex items-center gap-3">
+                  <div className="flex gap-1">
+                      {[1, 2, 3].map(i => <div key={i} className="w-1 h-1 bg-cyan-500 rounded-full animate-pulse" style={{ animationDelay: `${i * 0.2}s` }}></div>)}
+                  </div>
+                  <span className="text-[8px] font-black text-cyan-500 uppercase tracking-[0.3em]">System Online</span>
               </div>
-              <div className="flex items-center gap-1 bg-white/10 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full">
-                  <CloudSun size={16} className="text-amber-400" />
-                  <span className="text-xs font-bold text-white">28°C</span>
+              <div className="flex items-center gap-4 text-slate-500">
+                  <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-full border border-white/10">
+                    <Wifi size={10} className="text-cyan-400" />
+                    <span className="text-[8px] font-black text-slate-400">5G</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-full border border-white/10">
+                    <Battery size={10} className="text-emerald-400" />
+                    <span className="text-[8px] font-black text-slate-400">98%</span>
+                  </div>
               </div>
           </div>
 
-          {/* Hero Card */}
-          <GlassCard delay={0.1} className="bg-gradient-to-br from-blue-600/90 via-indigo-600/90 to-purple-700/90 border-white/20 p-0 overflow-hidden">
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay"></div>
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-cyan-400/20 rounded-full blur-3xl animate-pulse delay-700"></div>
-              
-              <div className="relative z-10 p-6 flex flex-col justify-between h-52 text-white">
-                  <div className="flex justify-between items-start">
-                      <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-lg border border-white/20 w-fit">
-                            <ShieldCheck size={14} className="text-yellow-400" />
-                            <span className="text-[10px] font-bold tracking-wider uppercase">Warga Berdaya</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 mt-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
-                          <span className="text-[9px] font-bold text-emerald-300 uppercase tracking-widest">Sistem Aktif</span>
-                        </div>
-                      </div>
-                      <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/20">
-                        <QrCode size={24} className="text-white" />
-                      </div>
+          <div className="flex justify-between items-center px-6">
+              <div className="flex items-center gap-4">
+                  <div className="relative group">
+                      <div className="absolute -inset-1.5 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-[1.5rem] blur-md opacity-40 group-hover:opacity-70 transition-opacity"></div>
+                      <img 
+                          src={user.photoUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} 
+                          alt={user.name}
+                          className="relative w-14 h-14 rounded-[1.25rem] border-2 border-white/20 object-cover shadow-2xl"
+                          referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 border-4 border-slate-950 rounded-full"></div>
                   </div>
-                  
-                  <div className="flex justify-between items-end">
-                    <div className="space-y-1">
-                        <span className="text-blue-100 text-[10px] font-bold tracking-widest uppercase opacity-70">Saldo Aktif</span>
-                        <div className="flex items-baseline gap-1">
-                            <span className="text-lg font-medium opacity-80">Rp</span>
-                            <h2 className="text-5xl font-black tracking-tighter">{(user.balance/1000).toLocaleString()}<span className="text-3xl opacity-60">.000</span></h2>
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <p className="text-[10px] font-bold text-blue-200/60 uppercase tracking-widest">ID Warga</p>
-                      <p className="text-xs font-mono font-bold text-white/90">#YSO-{user.id.substring(0, 6).toUpperCase()}</p>
-                    </div>
+                  <div>
+                      <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-0.5">Selamat Pagi,</p>
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-black text-white tracking-tight leading-none drop-shadow-lg">{user.name.split(' ')[0]}!</h1>
+                        <span className="px-2 py-0.5 bg-cyan-500/20 border border-cyan-500/30 rounded-md text-[8px] font-black text-cyan-400 uppercase tracking-widest backdrop-blur-md">
+                          {(user.userType || 'citizen').replace('_', ' ')}
+                        </span>
+                      </div>
                   </div>
               </div>
-          </GlassCard>
+              <div className="flex items-center gap-3">
+                <motion.button 
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => onViewChange && onViewChange(ViewMode.PROFILE)}
+                    className="w-12 h-12 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-white transition-colors relative"
+                >
+                    <BellRing size={22} />
+                    <span className="absolute top-3 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-slate-950"></span>
+                </motion.button>
+              </div>
+          </div>
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-4 gap-3 px-2">
+          {/* Quick Stats Row - Ultra Refined */}
+          <div className="flex gap-4 overflow-x-auto px-6 pb-2 no-scrollbar">
               {[
-                { label: 'Pindai', icon: ScanLine, color: 'text-cyan-400', onClick: handleScanClick, delay: 0.2 },
-                { label: 'Tracker', icon: Activity, color: 'text-emerald-400', onClick: () => onViewChange && onViewChange(ViewMode.TRACKER), delay: 0.25 },
-                { label: 'Kirim', icon: Send, color: 'text-orange-400', onClick: () => onViewChange && onViewChange(ViewMode.ECONOMY), delay: 0.3 },
-                { label: 'Isi Saldo', icon: PlusCircle, color: 'text-purple-400', onClick: () => onViewChange && onViewChange(ViewMode.ECONOMY), delay: 0.35 },
-              ].map((action, idx) => (
-                  <motion.button 
-                    key={idx} 
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: action.delay }}
-                    onClick={action.onClick} 
-                    className="flex flex-col items-center gap-2 group"
+                  { label: 'Saldo', value: `Rp ${(user.balance/1000).toLocaleString()}k`, icon: Wallet, color: 'text-cyan-400', bg: 'bg-cyan-500/10' },
+                  { label: 'Poin', value: '1.240', icon: Sparkles, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+                  { label: 'Sistem', value: 'A+ Secure', icon: ShieldCheck, color: 'text-emerald-400', bg: 'bg-emerald-500/10', view: ViewMode.EVALUATION },
+                  { label: 'Laporan', value: '2 Aktif', icon: AlertTriangle, color: 'text-rose-400', bg: 'bg-rose-500/10' },
+              ].map((stat, i) => (
+                  <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, scale: 0.9, x: 20 }}
+                      animate={{ opacity: 1, scale: 1, x: 0 }}
+                      transition={{ delay: 0.1 * i, type: 'spring' }}
+                      onClick={() => stat.view && onViewChange && onViewChange(stat.view)}
+                      className={`flex-shrink-0 bg-slate-900/40 backdrop-blur-2xl border border-white/10 p-4 rounded-[1.5rem] flex items-center gap-4 min-w-[160px] shadow-xl relative overflow-hidden group ${stat.view ? 'cursor-pointer' : ''}`}
                   >
-                      <div className="w-16 h-16 rounded-[1.2rem] bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center group-active:scale-90 transition duration-200">
-                          <action.icon size={24} className={action.color} />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${stat.color.replace('text-', 'from-')}/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
+                      <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color} relative z-10`}>
+                          <stat.icon size={18} />
                       </div>
-                      <span className="text-[11px] font-medium text-slate-300">{action.label}</span>
-                  </motion.button>
+                      <div className="relative z-10">
+                          <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{stat.label}</p>
+                          <p className="text-sm font-black text-white tracking-tight">{stat.value}</p>
+                      </div>
+                  </motion.div>
               ))}
           </div>
 
-          {/* AI Integration Card */}
-          <GlassCard 
-            onClick={onOpenAiAssistant}
-            className="bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border-cyan-500/30 cursor-pointer group"
-          >
-              <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                      <div className="p-3 bg-cyan-500 rounded-2xl shadow-lg shadow-cyan-500/30 group-hover:scale-110 transition-transform">
-                          <Sparkles className="text-white" size={24} />
+          {/* Hero Card - Ultra Advanced Visuals */}
+          <div className="px-6">
+              <GlassCard delay={0.1} className="bg-slate-950 border-white/5 p-0 overflow-hidden h-80 shadow-2xl shadow-blue-900/40 relative group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 via-transparent to-indigo-600/20"></div>
+                  <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-500/10 blur-[120px] rounded-full animate-pulse-glow"></div>
+                  <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-600/10 blur-[120px] rounded-full animate-pulse-glow" style={{ animationDelay: '2s' }}></div>
+                  
+                  {/* Animated Grid Background */}
+                  <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-[0.05] mix-blend-overlay"></div>
+                  
+                  <div className="relative z-10 p-8 flex flex-col justify-between h-full">
+                      <div className="flex justify-between items-start">
+                          <div className="space-y-2">
+                              <div className="flex items-center gap-2 bg-white/5 backdrop-blur-2xl px-3 py-1.5 rounded-full border border-white/10 w-fit">
+                                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
+                                  <span className="text-[9px] font-black text-white uppercase tracking-[0.3em]">Warga-ID v2.5.4</span>
+                              </div>
+                              <h2 className="text-4xl font-black text-white tracking-tighter mt-4 leading-[0.9]">
+                                  Digitalisasi <br />
+                                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 animate-bg-pan">Desa Mandiri</span>
+                              </h2>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <motion.div 
+                              whileHover={{ rotate: 90 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={handleScanClick}
+                              className="p-4 bg-white/5 rounded-[1.5rem] backdrop-blur-2xl border border-white/10 shadow-xl cursor-pointer hover:bg-white/10 transition-colors"
+                            >
+                                <QrCode size={28} className="text-white" />
+                            </motion.div>
+                            <motion.div 
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => onViewChange && onViewChange(ViewMode.SMART_HUB)}
+                              className="p-4 bg-white/5 rounded-[1.5rem] backdrop-blur-2xl border border-white/10 shadow-xl cursor-pointer hover:bg-white/10 transition-colors"
+                            >
+                                <LayoutGrid size={28} className="text-cyan-400" />
+                            </motion.div>
+                          </div>
                       </div>
-                      <div>
-                          <h3 className="text-white font-bold text-lg">Tanya AI MetalOS</h3>
-                          <p className="text-slate-400 text-xs">Butuh bantuan navigasi atau data desa?</p>
+                      
+                      <div className="flex justify-between items-end">
+                          <motion.button 
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              onClick={() => onViewChange && onViewChange(ViewMode.GEOSPATIAL)}
+                              className="flex items-center gap-3 bg-white text-slate-950 px-6 py-4 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-white/20 transition-all group"
+                          >
+                              <MapIcon size={18} className="group-hover:rotate-12 transition-transform" />
+                              <span>Buka Peta Desa</span>
+                          </motion.button>
+                          <div className="text-right">
+                              <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Status Ekonomi</p>
+                              <div className="flex items-center gap-2 justify-end">
+                                  <TrendingUp size={14} className="text-emerald-400" />
+                                  <p className="text-xl font-black text-emerald-400 tracking-tighter">SURPLUS</p>
+                              </div>
+                          </div>
                       </div>
                   </div>
-                  <ArrowRight className="text-cyan-400 group-hover:translate-x-2 transition-transform" />
-              </div>
-          </GlassCard>
+              </GlassCard>
+          </div>
 
-          {/* Super Grid */}
-          <div className="pt-2 px-2">
-              <h3 className="font-bold text-slate-200 text-lg mb-4 ml-1">Layanan Desa</h3>
-              <div className="grid grid-cols-4 gap-y-6 gap-x-4">
-                  {berdayaMenu.map((item, idx) => (
-                      <button 
-                        key={idx}
-                        onClick={() => onViewChange && onViewChange(item.view)}
-                        className="flex flex-col items-center gap-2 group"
+          {/* Service Grid - Ultra Bento Style */}
+          <div className="px-6 space-y-6">
+              <div className="flex justify-between items-end">
+                  <div>
+                      <h3 className="text-xl font-black text-white tracking-tight">Layanan Digital</h3>
+                      <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Akses Cepat Fasilitas Desa</p>
+                  </div>
+                  <button className="text-[10px] font-black text-cyan-400 uppercase tracking-widest bg-cyan-400/10 px-3 py-1.5 rounded-full border border-cyan-400/20">Semua</button>
+              </div>
+
+              <div className="grid grid-cols-4 gap-3">
+                  {berdayaMenu.slice(0, 8).map((item, i) => (
+                      <motion.button
+                          key={i}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.05 * i }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={() => onViewChange && onViewChange(item.view)}
+                          className="flex flex-col items-center gap-3 group"
                       >
-                          <div className={`w-[72px] h-[72px] rounded-[1.8rem] flex items-center justify-center shadow-lg transition-all duration-300 active:scale-90 bg-gradient-to-br ${item.color}`}>
-                              <item.icon size={28} className="text-white drop-shadow-md" strokeWidth={2} />
+                          <div className={`w-16 h-16 rounded-[1.75rem] bg-gradient-to-br ${item.color} p-[1px] shadow-lg shadow-black/20 group-hover:scale-110 transition-transform duration-300`}>
+                              <div className="w-full h-full bg-slate-900 rounded-[1.75rem] flex items-center justify-center relative overflow-hidden">
+                                  <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
+                                  <item.icon className="w-7 h-7 text-white relative z-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]" />
+                              </div>
                           </div>
-                          <span className="text-[11px] font-medium text-slate-300 text-center">{item.label}</span>
-                      </button>
+                          <span className="text-[9px] font-black text-slate-400 group-hover:text-white uppercase tracking-widest text-center leading-tight transition-colors">{item.label}</span>
+                      </motion.button>
                   ))}
               </div>
+          </div>
+
+          {/* Live Activity Feed - Ultra Mobile First */}
+          <div className="px-6 space-y-4">
+              <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-black text-white tracking-tight">Aktivitas Terkini</h3>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-400/10 px-3 py-1.5 rounded-full border border-emerald-400/20">
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></div>
+                      Live
+                  </div>
+              </div>
+              <div className="space-y-3">
+                  {activities.slice(0, 4).map((act, i) => (
+                      <motion.div 
+                          key={i}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.1 * i }}
+                          className="bg-slate-900/40 backdrop-blur-2xl border border-white/5 p-4 rounded-2xl flex items-center gap-4 group hover:bg-white/5 transition-all"
+                      >
+                          <div className={`p-2.5 rounded-xl bg-white/5 ${act.color} border border-white/10 group-hover:scale-110 transition-transform`}>
+                              {act.icon === 'Wallet' && <Wallet size={18} />}
+                              {act.icon === 'AlertCircle' && <AlertCircle size={18} />}
+                              {act.icon === 'ShoppingBag' && <ShoppingBag size={18} />}
+                              {act.icon === 'ShieldCheck' && <ShieldCheck size={18} />}
+                              {act.icon === 'MessageSquare' && <MessageSquare size={18} />}
+                              {act.icon === 'Truck' && <Truck size={18} />}
+                              {act.icon === 'Zap' && <Zap size={18} />}
+                              {act.icon === 'Trash2' && <Trash2 size={18} />}
+                          </div>
+                          <div className="flex-1">
+                              <div className="flex justify-between items-start">
+                                  <p className="text-sm font-black text-white tracking-tight">{act.event}</p>
+                                  <p className="text-[10px] font-bold text-slate-500">{act.time}</p>
+                              </div>
+                              <p className="text-xs text-slate-400 mt-0.5">{act.detail}</p>
+                          </div>
+                          <ArrowRight size={14} className="text-slate-600 group-hover:text-cyan-400 transition-colors" />
+                      </motion.div>
+                  ))}
+              </div>
+          </div>
+
+          {/* AI Integration - Floating Style */}
+          <div className="px-4">
+              <motion.div 
+                whileTap={{ scale: 0.98 }}
+                onClick={onOpenAiAssistant}
+                className="relative p-6 rounded-[2rem] bg-slate-900 border border-cyan-500/30 overflow-hidden cursor-pointer group"
+              >
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 blur-3xl rounded-full"></div>
+                  <div className="relative z-10 flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-gradient-to-tr from-cyan-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                              <Sparkles className="text-white" size={24} />
+                          </div>
+                          <div>
+                              <h3 className="text-white font-black text-lg leading-none">Tanya Semesta</h3>
+                              <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">AI Assistant Terintegrasi</p>
+                          </div>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-cyan-400 group-hover:translate-x-1 transition-transform">
+                          <ArrowRight size={16} />
+                      </div>
+                  </div>
+              </motion.div>
           </div>
       </div>
 
@@ -385,25 +604,23 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Stat Cards */}
           {[
-              { title: 'Total Penduduk', value: villageStats.totalPenduduk.toLocaleString(), sub: '+2.4%', icon: Users, color: 'blue', delay: 0.1 },
+              { title: 'Total Penduduk', value: villageStats.totalPenduduk.toLocaleString(), sub: '+2.4%', icon: Users, color: 'cyan', delay: 0.1 },
               { title: 'Indeks Desa', value: villageStats.indeksDesa.toFixed(3), sub: 'Mandiri', icon: Activity, color: 'emerald', delay: 0.2 },
-              { title: 'Logistik', value: villageStats.logistik.toString(), sub: '85 Aktif', icon: Truck, color: 'orange', delay: 0.3 },
-              { title: 'Peringatan', value: villageStats.peringatan.toString(), sub: 'Waspada', icon: AlertTriangle, color: 'red', delay: 0.4 },
+              { title: 'Logistik', value: villageStats.logistik.toString(), sub: '85 Aktif', icon: Truck, color: 'amber', delay: 0.3 },
+              { title: 'Evaluasi Sistem', value: 'A+', sub: 'Secure', icon: ShieldCheck, color: 'rose', delay: 0.4, view: ViewMode.EVALUATION },
           ].map((card, i) => (
-              <GlassCard key={i} delay={card.delay} className="group/card">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-white/5 to-transparent rounded-full -mr-16 -mt-16 transition-transform group-hover/card:scale-150 duration-700"></div>
-                  <div className="flex justify-between items-start relative z-10">
-                      <div>
-                          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">{card.title}</p>
-                          <h3 className="text-4xl font-black text-white mt-2 tracking-tighter">{card.value}</h3>
-                      </div>
-                      <div className={`p-3 bg-${card.color}-500/10 rounded-2xl text-${card.color}-400 border border-${card.color}-500/20 group-hover/card:scale-110 transition-transform duration-500`}>
-                          <card.icon size={24} />
-                      </div>
+              <GlassCard 
+                key={i} 
+                delay={card.delay} 
+                className="group/card cursor-pointer flex items-center gap-4 p-4 rounded-[1.5rem]"
+                onClick={() => card.view && onViewChange && onViewChange(card.view)}
+              >
+                  <div className={`p-2.5 rounded-xl bg-${card.color}-500/10 text-${card.color}-400 border border-${card.color}-500/20 group-hover/card:scale-110 transition-transform duration-500`}>
+                      <card.icon size={18} />
                   </div>
-                  <div className="mt-6 flex items-center text-xs text-slate-400 relative z-10">
-                      <span className={`text-${card.color}-400 font-bold bg-${card.color}-500/10 px-2 py-0.5 rounded-lg mr-2 border border-${card.color}-500/20`}>{card.sub}</span>
-                      Live Data Stream
+                  <div>
+                      <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">{card.title}</p>
+                      <p className="text-sm font-black text-white tracking-tight">{card.value}</p>
                   </div>
               </GlassCard>
           ))}
@@ -476,7 +693,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
                        <h3 className="text-lg font-bold text-white mb-6 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-blue-500/20 rounded-lg"><Mail className="w-4 h-4 text-blue-400" /></div>
-                                <span className="tracking-tight">E-Office Suite</span>
+                                <span className="tracking-tight">Office Suite</span>
                             </div>
                             <button className="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition uppercase tracking-widest">View All</button>
                        </h3>
@@ -640,6 +857,51 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
                       </div>
                   </GlassCard>
               </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <GlassCard className="border-indigo-500/20">
+                      <h3 className="text-lg font-bold text-white mb-6 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                              <div className="p-2 bg-indigo-500/20 rounded-lg"><CloudSun className="w-4 h-4 text-indigo-400" /></div>
+                              <span className="tracking-tight">Google Workspace Integration</span>
+                          </div>
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                          {[
+                              { label: 'Gmail', status: workspaceStatus.gmail, icon: Mail, color: 'text-red-400' },
+                              { label: 'Calendar', status: workspaceStatus.calendar, icon: Calendar, color: 'text-blue-400' },
+                              { label: 'Drive', status: workspaceStatus.drive, icon: HardDrive, color: 'text-yellow-400' },
+                              { label: 'Contacts', status: workspaceStatus.contacts, icon: Contact, color: 'text-blue-500' },
+                          ].map((item, i) => (
+                              <div key={i} className="p-3 bg-white/5 rounded-xl border border-white/5 flex items-center justify-between group hover:bg-white/10 transition">
+                                  <div className="flex items-center gap-3">
+                                      <item.icon size={16} className={item.color} />
+                                      <span className="text-xs font-bold text-slate-300">{item.label}</span>
+                                  </div>
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${item.status === 'Connected' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                      {item.status}
+                                  </span>
+                              </div>
+                          ))}
+                      </div>
+                  </GlassCard>
+
+                  <GlassCard className="border-amber-500/20 flex flex-col justify-center items-center text-center">
+                      <div className="p-4 bg-amber-500/10 rounded-full mb-4">
+                          <Sparkles className="text-amber-400 w-8 h-8" />
+                      </div>
+                      <h3 className="text-xl font-black text-white mb-2">Gemini AI Engine</h3>
+                      <p className="text-slate-400 text-xs max-w-xs mb-6">
+                          Sistem kecerdasan buatan terintegrasi untuk analisis data dan asisten warga.
+                      </p>
+                      <button 
+                        onClick={onOpenAiAssistant}
+                        className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-8 py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-amber-500/20 hover:scale-105 transition active:scale-95"
+                      >
+                          Buka Asisten AI
+                      </button>
+                  </GlassCard>
+              </div>
           </div>
 
           {/* Side Column - Live Feed */}
@@ -695,7 +957,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
           <div className="p-6 flex justify-between items-center bg-black/50 backdrop-blur-md absolute top-0 left-0 right-0 z-10">
             <div className="flex items-center space-x-2">
               <Camera className="w-5 h-5 text-cyan-400" />
-              <span className="font-bold tracking-wider text-white">METAL-SCANNER</span>
+              <span className="font-bold tracking-wider text-white uppercase">WARGA-SCANNER</span>
             </div>
             <button onClick={closeScanner} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition text-white">
               <X size={24} />
@@ -732,4 +994,4 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user = MOCK_USER, onViewC
   );
 };
 
-export default DashboardView;
+export default HomeView;

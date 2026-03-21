@@ -1,5 +1,41 @@
 
 
+export interface BerdayaOrder {
+  id: string;
+  type: 'PRODUCT' | 'SERVICE';
+  itemId: string;
+  itemName: string;
+  price: number;
+  quantity: number;
+  total: number;
+  status: 'PENDING' | 'PAID' | 'PROCESSING' | 'SHIPPING' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
+  date: string;
+  sellerId: string;
+  sellerName: string;
+  buyerId: string;
+  buyerName: string;
+  paymentMethod: 'WARGAPAY' | 'QRIS' | 'CASH';
+  deliveryId?: string; // Link to Anjelo
+  trackingNumber?: string;
+}
+
+export interface BerdayaImpact {
+  totalRevenue: number;
+  jobsCreated: number;
+  msmesSupported: number;
+  socialContribution: number;
+  carbonReduced: number; // in kg
+}
+
+export interface BarcodeData {
+  id: string;
+  label: string;
+  value: string;
+  type: 'BARCODE' | 'QR';
+  format?: 'CODE128' | 'EAN13' | 'UPC';
+  createdAt: string;
+}
+
 export enum ViewMode {
   DASHBOARD = 'DASHBOARD',
   GOVERNANCE = 'GOVERNANCE', // Glass House Governance
@@ -8,9 +44,8 @@ export enum ViewMode {
   ENVIRONMENT = 'ENVIRONMENT', // Warga-Enviro, IoT
   SOCIAL = 'SOCIAL', // Reports, Musrenbang
   GAPURA = 'GAPURA', // Smart Gateway & MetalGate
-  EOFFICE = 'EOFFICE', // E-Office Suite
+  OFFICE_SUITE = 'OFFICE_SUITE', // Office Suite (Unified)
   POSKAMLING = 'POSKAMLING', // New Smart Security Module
-  MARKET = 'MARKET', // New Pasar Payungi Centralized Cashier
   PARKING = 'PARKING', // New Centralized Parking Management
   HEALTH = 'HEALTH', // New Integrated Health Module
   EDUCATION = 'EDUCATION', // New Education Module
@@ -20,6 +55,11 @@ export enum ViewMode {
   TASKS = 'TASKS', // Team Task Assignment
   ASSETS = 'ASSETS', // Asset Management
   TRACKER = 'TRACKER', // Integrated Operational Tracker
+  IOT = 'IOT', // IoT & Smart Village
+  SMART_HUB = 'SMART_HUB', // Unified Smart Hub (Gateway, IoT, Security, Mobility)
+  PROFILE = 'PROFILE',
+  EVALUATION = 'EVALUATION',
+  OSS = 'OSS', // Online Single Submission Integration
   SETTINGS = 'SETTINGS'
 }
 
@@ -62,6 +102,37 @@ export interface IotSensor {
   lastUpdate: string;
 }
 
+export interface VisitorLog {
+    id: string;
+    name: string;
+    type: 'RESIDENT' | 'GUEST' | 'DELIVERY' | 'UNKNOWN';
+    time: string;
+    method: 'WIFI' | 'CAMERA' | 'MANUAL';
+    status: 'AUTHORIZED' | 'PENDING' | 'FLAGGED';
+    vehiclePlate?: string;
+}
+
+export interface SecurityAlert {
+    id: string;
+    type: 'MOTION' | 'LOITERING' | 'UNAUTHORIZED_ACCESS' | 'EMERGENCY';
+    location: string;
+    time: string;
+    severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+    status: 'ACTIVE' | 'RESOLVED' | 'DISMISSED';
+}
+
+export interface CourierStatus {
+  uid: string;
+  name: string;
+  status: 'ONLINE' | 'OFFLINE' | 'BUSY';
+  location?: { lat: number; lng: number };
+  vehicleType?: string;
+  plateNumber?: string;
+  rating?: number;
+  totalDeliveries?: number;
+  earningsToday?: number;
+}
+
 export interface CitizenProfile {
   id: string; // Added ID for selection
   name: string;
@@ -72,6 +143,28 @@ export interface CitizenProfile {
   avatarSeed?: string; // For UI avatar
   photoUrl?: string; // For uploaded/captured profile picture
   mandiriVA?: string; // Mandiri Virtual Account number
+  phone?: string;
+  email?: string;
+  address?: string;
+  bio?: string;
+  nik?: string; // National ID Number (Digital KTP)
+  nib?: string; // Business Identification Number (NIB)
+  nip?: string; // Civil Servant ID (NIP)
+  nim?: string; // University Student ID (NIM)
+  nis?: string; // School Student ID (NIS)
+  kip?: string; // Kartu Indonesia Pintar (KIP)
+  kis?: string; // Kartu Indonesia Sehat (KIS)
+  kelurahan?: string; // Kelurahan/Entitas domisili
+  ossId?: string; // OSS Integration ID
+  isOssLinked?: boolean;
+  ssoProvider?: 'GOOGLE' | 'OSS' | 'METAL_ID';
+  userType?: 'citizen' | 'business_entity' | 'government';
+  birthDate?: string;
+  gender?: 'Laki-laki' | 'Perempuan';
+  occupation?: string;
+  achievements?: { id: string; title: string; icon: string; date: string }[];
+  lastSeen?: any;
+  status?: 'Online' | 'Offline' | 'Busy';
 }
 
 export interface ChatMessage {
@@ -113,24 +206,28 @@ export interface MarketplaceItem {
   name: string;
   price: number;
   seller: string;
+  sellerId?: string; // Added for ownership
   imageColor: string;
   category: string;
   imageUrl?: string;
+  description?: string; // Added for more detail
+  stock?: number; // Added for inventory
 }
 
 export interface ServiceProvider {
     id: string;
     name: string;
+    sellerId?: string; // Added for ownership
     category: 'REPARASI' | 'KESEHATAN' | 'PENDIDIKAN' | 'LAUNDRY' | 'LAINNYA';
     description: string;
     contact: string;
     rating: number;
     isOpen: boolean;
-    // New Pricing Transparency Fields
     price: number;
-    unit: string; // e.g., "kg", "jam", "titik"
+    unit: string;
     minOrder: number;
-    exceptions?: string; // e.g., "Tidak termasuk sparepart"
+    exceptions?: string;
+    imageColor?: string; // Added for UI consistency
 }
 
 export interface WargaContact {
@@ -210,6 +307,7 @@ export interface ParkingZone {
     coordinates: { x: number; y: number }; // Map percentage
     realCoordinates?: { lat: number; lng: number }; // Added for Geospatial Dashboard
     merchantId: string; // Livin Merchant ID
+    price: number; // Added for POS pricing
 }
 
 export interface WifiPackage {
